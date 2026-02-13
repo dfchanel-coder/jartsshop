@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JART'S Perfumes</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+</head>
+<body>
+
+    <header>
+        <div class="logo">JART'S</div>
+        <div class="cart-icon" onclick="toggleCart()">
+            <i class="fa fa-shopping-bag"></i>
+            <span id="cart-count">0</span>
+        </div>
+    </header>
+
+    <div style="background:#f4f4f4; padding:40px; text-align:center;">
+        <h1 style="font-weight:300; letter-spacing:5px;">ESENCIA ÚNICA</h1>
+        <p style="color:#666;">Descubre la colección exclusiva</p>
+    </div>
+
+    <div class="container" id="catalogo">
+        <p style="text-align:center; padding:50px;">Cargando fragancias...</p>
+    </div>
+
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="display:flex; justify-content:space-between;">
+                Tu Carrito <span onclick="toggleCart()" style="cursor:pointer;">&times;</span>
+            </h2>
+            <div id="cart-items"></div>
+            <h3 style="text-align:right;">Total: $<span id="cart-total">0</span></h3>
+            
+            <input type="text" id="cliente-nombre" placeholder="Tu Nombre" style="width:100%; padding:10px; margin-bottom:10px;">
+            <input type="tel" id="cliente-tel" placeholder="Tu Teléfono" style="width:100%; padding:10px; margin-bottom:10px;">
+            
+            <button class="btn-checkout" onclick="pagar()">Ir a Pagar</button>
+            <div id="wallet_container"></div>
+        </div>
+    </div>
+
+    <a href="https://wa.me/59899822758" class="whatsapp-float" target="_blank">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <footer>
+        <p>Desarrollado con <i class="fa fa-heart" style="color:#d4af37"></i> por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p>
+        <p>&copy; 2026 JART'S Perfumes.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

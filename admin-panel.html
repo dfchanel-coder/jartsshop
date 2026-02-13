@@ -1,0 +1,65 @@
+<div id="admin-app">
+    <nav>
+        <button onclick="showSection('productos')">Productos</button>
+        <button onclick="showSection('ordenes')">Órdenes</button>
+        <button onclick="showSection('config')">Configuración</button>
+    </nav>
+
+    <div id="ordenes" class="section" style="display:none;">
+        <h2>Gestión de Pedidos</h2>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Detalles</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="lista-ordenes">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function cargarOrdenes() {
+        const res = await fetch('/api/admin/ordenes');
+        if(res.status === 401) window.location.href = '/login.html'; // Seguridad
+        const ordenes = await res.json();
+        
+        const tbody = document.getElementById('lista-ordenes');
+        tbody.innerHTML = ordenes.map(o => `
+            <tr>
+                <td>#${o.id}</td>
+                <td>
+                    <strong>${o.cliente_nombre}</strong><br>
+                    <small>${o.cliente_telefono}</small>
+                </td>
+                <td>$${o.total}</td>
+                <td><span class="badge ${o.estado}">${o.estado}</span></td>
+                <td>
+                    <button onclick='verDetalle(${JSON.stringify(o.items_json)})'>Ver Productos</button>
+                </td>
+                <td>
+                    <select onchange="cambiarEstado(${o.id}, this.value)">
+                        <option value="Pendiente" ${o.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                        <option value="Pagado" ${o.estado === 'Pagado' ? 'selected' : ''}>Pagado</option>
+                        <option value="Enviado" ${o.estado === 'Enviado' ? 'selected' : ''}>Enviado</option>
+                    </select>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function cambiarEstado(id, nuevoEstado) {
+        await fetch('/api/admin/orden-estado', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id, estado: nuevoEstado })
+        });
+        alert('Estado actualizado');
+    }
+</script>

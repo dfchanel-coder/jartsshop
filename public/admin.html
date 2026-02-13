@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JART'S Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container { max-width: 800px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .login-box { max-width: 400px; margin: 100px auto; text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        input, textarea, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .nav-admin button { background: #eee; border: none; padding: 10px 20px; margin-right: 5px; cursor: pointer; }
+        .nav-admin button.active { background: var(--accent); color: white; }
+        .table-admin { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .table-admin th, .table-admin td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <div id="login-view" class="login-box">
+        <h2>Acceso Administrativo</h2>
+        <input type="text" id="user" placeholder="Usuario">
+        <input type="password" id="pass" placeholder="Contraseña">
+        <button class="btn-add" onclick="login()">Ingresar</button>
+    </div>
+
+    <div id="dashboard-view" class="admin-container" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>Panel de Control</h1>
+            <button onclick="logout()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">Salir</button>
+        </div>
+        
+        <div class="nav-admin">
+            <button onclick="switchTab('productos')" class="active">Cargar Producto</button>
+            <button onclick="switchTab('ordenes')">Ver Pedidos</button>
+        </div>
+
+        <div id="tab-productos" style="margin-top:20px;">
+            <h3>Nuevo Perfume</h3>
+            <input type="text" id="p-nombre" placeholder="Nombre del Perfume">
+            <input type="number" id="p-precio" placeholder="Precio (UYU)">
+            <input type="text" id="p-categoria" placeholder="Categoría (Ej: Hombres, Verano, Ofertas)">
+            <input type="url" id="p-img" placeholder="Link Directo de Postimages">
+            <textarea id="p-desc" placeholder="Descripción"></textarea>
+            <button class="btn-add" onclick="guardarProducto()">Publicar Producto</button>
+        </div>
+
+        <div id="tab-ordenes" style="display:none; margin-top:20px;">
+            <h3>Últimos Pedidos</h3>
+            <table class="table-admin">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-ordenes"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
