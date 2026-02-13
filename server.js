@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static('public'));
 
-// Sesión
+// Configuración de Sesión
 app.use(session({
     secret: 'jarts_secret_key_2026',
     resave: false,
@@ -24,7 +24,7 @@ const pool = new Pool({
     ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Auto-configuración de Tablas
+// Auto-configuración de Tablas (Inicial)
 async function iniciarDB() {
     try {
         await pool.query(`
@@ -54,15 +54,18 @@ async function iniciarDB() {
                 fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('--- BASE DE DATOS LISTA ---');
+        console.log('--- BASE DE DATOS INICIADA ---');
     } catch (err) { console.error('Error DB:', err); }
 }
 iniciarDB();
 
-// Mercado Pago
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
+// Mercado Pago (Manejo de error si no hay token)
+let client;
+try {
+    client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || 'DUMMY_TOKEN' });
+} catch (e) { console.log('Esperando token de MP...'); }
 
-// --- MIDDLEWARE AUTH ---
+// --- MIDDLEWARES ---
 const requireAuth = (req, res, next) => {
     if (!req.session.userId) return res.status(401).json({ error: 'No autorizado' });
     next();
@@ -76,7 +79,7 @@ app.get('/api/perfumes', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// LOGIN
+// LOGIN ADMIN
 app.post('/api/login', async (req, res) => {
     const { usuario, password } = req.body;
     try {
@@ -101,11 +104,11 @@ app.get('/setup-admin', async (req, res) => {
     try {
         const passHash = await bcrypt.hash('admin123', 10);
         await pool.query('INSERT INTO usuarios_admin (usuario, password) VALUES ($1, $2) ON CONFLICT DO NOTHING', ['admin', passHash]);
-        res.send('Admin creado/verificado');
+        res.send('Usuario admin creado: admin / admin123');
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- RUTAS ADMIN (PRODUCTOS) ---
+// --- GESTIÓN DE PRODUCTOS (ADMIN) ---
 app.post('/api/admin/productos', requireAuth, async (req, res) => {
     const { nombre, precio, categoria, imagen_url, descripcion } = req.body;
     try {
@@ -136,7 +139,7 @@ app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- RUTAS ADMIN (ÓRDENES) ---
+// --- GESTIÓN DE ÓRDENES (ADMIN) ---
 app.get('/api/admin/ordenes', requireAuth, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC');
@@ -159,14 +162,19 @@ app.post('/api/nueva-orden', async (req, res) => {
     const itemsJson = JSON.stringify(items);
     
     try {
-        // 1. Guardar orden en BD
+        // 1. Guardar orden en BD (Con dirección y método)
         const result = await pool.query(
             'INSERT INTO ordenes (cliente_nombre, cliente_telefono, cliente_direccion, metodo_pago, items_json, total) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
             [comprador.nombre, comprador.telefono, comprador.direccion, metodo_pago, itemsJson, total]
         );
         const ordenId = result.rows[0].id;
 
-        // 2. Si es Mercado Pago, crear preferencia
+        // 2. Si es Transferencia, terminamos aquí
+        if (metodo_pago === 'transferencia') {
+            return res.json({ type: 'transfer', id: ordenId });
+        }
+
+        // 3. Si es Mercado Pago
         if (metodo_pago === 'mercadopago') {
             const preference = new Preference(client);
             const response = await preference.create({
@@ -174,7 +182,7 @@ app.post('/api/nueva-orden', async (req, res) => {
                     items: items,
                     external_reference: `${ordenId}`,
                     back_urls: {
-                        success: "https://jarts-shop.onrender.com",
+                        success: "https://jarts-shop.onrender.com", 
                         failure: "https://jarts-shop.onrender.com",
                         pending: "https://jarts-shop.onrender.com"
                     },
@@ -184,23 +192,22 @@ app.post('/api/nueva-orden', async (req, res) => {
             return res.json({ type: 'mp', id: response.id });
         }
 
-        // 3. Si es Transferencia, solo confirmar
-        res.json({ type: 'transfer', id: ordenId });
-
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Error procesando orden' });
+        res.status(500).json({ error: 'Error procesando orden: ' + error.message });
     }
 });
-// --- RUTA DE EMERGENCIA PARA ACTUALIZAR BD ---
+
+// --- RUTA DE EMERGENCIA (Corrección BD) ---
 app.get('/fix-db', async (req, res) => {
     try {
         await pool.query('ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS cliente_direccion TEXT');
         await pool.query('ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS metodo_pago VARCHAR(50)');
-        res.send('✅ Base de datos actualizada: Se agregaron las columnas dirección y método de pago.');
+        res.send('✅ Base de datos actualizada correctamente. Ya puedes comprar.');
     } catch (err) {
         res.status(500).send('❌ Error actualizando BD: ' + err.message);
     }
 });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
