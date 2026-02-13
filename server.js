@@ -192,6 +192,15 @@ app.post('/api/nueva-orden', async (req, res) => {
         res.status(500).json({ error: 'Error procesando orden' });
     }
 });
-
+// --- RUTA DE EMERGENCIA PARA ACTUALIZAR BD ---
+app.get('/fix-db', async (req, res) => {
+    try {
+        await pool.query('ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS cliente_direccion TEXT');
+        await pool.query('ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS metodo_pago VARCHAR(50)');
+        res.send('✅ Base de datos actualizada: Se agregaron las columnas dirección y método de pago.');
+    } catch (err) {
+        res.status(500).send('❌ Error actualizando BD: ' + err.message);
+    }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
