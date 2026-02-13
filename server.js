@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2');
+const { Pool } = require('pg'); // Usamos PG en vez de MySQL
 const cors = require('cors');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -15,51 +15,79 @@ app.use(session({
     secret: 'jarts_secret_key_2026',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } // Pon true si usas HTTPS en producción
+    cookie: { secure: false } 
 }));
 
-// --- CONFIGURACIÓN BASE DE DATOS ---
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',       // <--- TU USUARIO SQL
-    password: '',       // <--- TU CONTRASEÑA SQL
-    database: 'jarts_db'
+// --- CONEXIÓN BASE DE DATOS (POSTGRESQL) ---
+// En local usará tu string, en Render usará la variable de entorno automática
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:tu_password_local@localhost:5432/jarts_db',
+    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-db.connect(err => {
-    if (err) console.error('Error conectando a BD:', err);
-    else console.log('Conectado a MySQL');
-});
+// --- AUTO-CREACIÓN DE TABLAS (MÁGICO) ---
+async function iniciarDB() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS usuarios_admin (
+                id SERIAL PRIMARY KEY,
+                usuario VARCHAR(50) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS perfumes (
+                id SERIAL PRIMARY KEY,
+                nombre VARCHAR(255) NOT NULL,
+                precio DECIMAL(10, 2) NOT NULL,
+                categoria VARCHAR(100) NOT NULL,
+                imagen_url TEXT NOT NULL,
+                descripcion TEXT,
+                activo BOOLEAN DEFAULT true
+            );
+            CREATE TABLE IF NOT EXISTS ordenes (
+                id SERIAL PRIMARY KEY,
+                cliente_nombre VARCHAR(100),
+                cliente_telefono VARCHAR(50),
+                items_json TEXT, 
+                total DECIMAL(10, 2),
+                estado VARCHAR(50) DEFAULT 'Pendiente',
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('--- TABLAS VERIFICADAS/CREADAS ---');
+    } catch (err) {
+        console.error('Error creando tablas:', err);
+    }
+}
+iniciarDB();
 
-// --- CONFIGURACIÓN MERCADO PAGO ---
-// Reemplaza con tu ACCESS_TOKEN de producción o prueba
-const client = new MercadoPagoConfig({ accessToken: 'TU_ACCESS_TOKEN_AQUI' });
+// --- MERCADO PAGO ---
+const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || 'TU_ACCESS_TOKEN_AQUI' });
 
-// --- RUTAS DE LOGIN Y SEGURIDAD ---
+// --- RUTAS ---
 
-// Crear admin inicial (Ejecutar una vez: http://localhost:3000/setup-admin)
+// Setup Admin (Ejecutar una vez)
 app.get('/setup-admin', async (req, res) => {
-    const passHash = await bcrypt.hash('admin123', 10);
-    db.query('INSERT IGNORE INTO usuarios_admin (usuario, password) VALUES (?, ?)', 
-    ['admin', passHash], (err) => {
-        if(err) return res.send(err);
-        res.send('Usuario admin creado: admin / admin123');
-    });
+    try {
+        const passHash = await bcrypt.hash('admin123', 10);
+        await pool.query('INSERT INTO usuarios_admin (usuario, password) VALUES ($1, $2) ON CONFLICT DO NOTHING', ['admin', passHash]);
+        res.send('Usuario admin creado/verificado');
+    } catch (err) { res.status(500).send(err.message); }
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { usuario, password } = req.body;
-    db.query('SELECT * FROM usuarios_admin WHERE usuario = ?', [usuario], async (err, results) => {
-        if (results.length === 0) return res.status(401).json({ error: 'Usuario no encontrado' });
+    try {
+        const result = await pool.query('SELECT * FROM usuarios_admin WHERE usuario = $1', [usuario]);
+        if (result.rows.length === 0) return res.status(401).json({ error: 'Usuario no encontrado' });
         
-        const valid = await bcrypt.compare(password, results[0].password);
+        const valid = await bcrypt.compare(password, result.rows[0].password);
         if (valid) {
-            req.session.userId = results[0].id;
+            req.session.userId = result.rows[0].id;
             res.json({ success: true });
         } else {
             res.status(401).json({ error: 'Contraseña incorrecta' });
         }
-    });
+    } catch (err) { res.status(500).json({ error: 'Error de servidor' }); }
 });
 
 app.get('/api/check-auth', (req, res) => {
@@ -71,81 +99,80 @@ app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// Middleware de protección
 const requireAuth = (req, res, next) => {
     if (!req.session.userId) return res.status(401).json({ error: 'No autorizado' });
     next();
 };
 
-// --- RUTAS DE PRODUCTOS ---
-app.get('/api/perfumes', (req, res) => {
-    db.query('SELECT * FROM perfumes ORDER BY id DESC', (err, results) => {
-        res.json(results);
-    });
+// Productos
+app.get('/api/perfumes', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM perfumes ORDER BY id DESC');
+        res.json(result.rows);
+    } catch (err) { res.status(500).send(err.message); }
 });
 
-app.post('/api/admin/productos', requireAuth, (req, res) => {
+app.post('/api/admin/productos', requireAuth, async (req, res) => {
     const { nombre, precio, categoria, imagen_url, descripcion } = req.body;
-    const sql = 'INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion) VALUES (?,?,?,?,?)';
-    db.query(sql, [nombre, precio, categoria, imagen_url, descripcion], (err, result) => {
-        if (err) return res.status(500).send(err);
+    try {
+        await pool.query(
+            'INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion) VALUES ($1, $2, $3, $4, $5)', 
+            [nombre, precio, categoria, imagen_url, descripcion]
+        );
         res.json({ success: true });
-    });
+    } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- RUTAS DE ÓRDENES ---
-app.get('/api/admin/ordenes', requireAuth, (req, res) => {
-    db.query('SELECT * FROM ordenes ORDER BY fecha DESC', (err, results) => {
-        res.json(results);
-    });
+// Órdenes
+app.get('/api/admin/ordenes', requireAuth, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC');
+        res.json(result.rows);
+    } catch (err) { res.status(500).send(err.message); }
 });
 
-app.post('/api/admin/orden-estado', requireAuth, (req, res) => {
+app.post('/api/admin/orden-estado', requireAuth, async (req, res) => {
     const { id, estado } = req.body;
-    db.query('UPDATE ordenes SET estado = ? WHERE id = ?', [estado, id], (err) => {
-        if (err) return res.status(500).send(err);
+    try {
+        await pool.query('UPDATE ordenes SET estado = $1 WHERE id = $2', [estado, id]);
         res.json({ success: true });
-    });
+    } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- RUTA CHECKOUT (MERCADO PAGO) ---
+// Checkout
 app.post('/api/create_preference', async (req, res) => {
     const { items, comprador } = req.body;
-    
-    // 1. Guardar Orden en BD
     const total = items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
     const itemsJson = JSON.stringify(items);
     
-    db.query('INSERT INTO ordenes (cliente_nombre, cliente_telefono, items_json, total) VALUES (?,?,?,?)',
-    [comprador.nombre, comprador.telefono, itemsJson, total], 
-    async (err, result) => {
-        if (err) return res.status(500).json({ error: 'Error BD' });
-        
-        const ordenId = result.insertId;
+    try {
+        const result = await pool.query(
+            'INSERT INTO ordenes (cliente_nombre, cliente_telefono, items_json, total) VALUES ($1, $2, $3, $4) RETURNING id',
+            [comprador.nombre, comprador.telefono, itemsJson, total]
+        );
+        const ordenId = result.rows[0].id;
 
-        // 2. Crear Preferencia MP
-        try {
-            const body = {
+        const preference = new Preference(client);
+        const response = await preference.create({
+            body: {
                 items: items,
                 external_reference: `${ordenId}`,
                 back_urls: {
-                    success: "http://localhost:3000/success", // Cambiar por tu dominio real
-                    failure: "http://localhost:3000/failure",
-                    pending: "http://localhost:3000/pending"
+                    success: "https://jarts-shop.onrender.com", // OJO: Cambia esto por tu URL de Render cuando la tengas
+                    failure: "https://jarts-shop.onrender.com",
+                    pending: "https://jarts-shop.onrender.com"
                 },
                 auto_return: "approved",
-            };
-            const preference = new Preference(client);
-            const response = await preference.create({ body });
-            res.json({ id: response.id });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Error Mercado Pago' });
-        }
-    });
+            }
+        });
+        res.json({ id: response.id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error procesando pago' });
+    }
 });
 
-app.listen(3000, () => {
-    console.log('Servidor corriendo en http://localhost:3000');
-    console.log('PARA CREAR ADMIN: Visita http://localhost:3000/setup-admin una vez');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
 });
