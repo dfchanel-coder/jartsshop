@@ -1,14 +1,14 @@
 let carrito = [];
-const mp = new MercadoPago('TU_PUBLIC_KEY_AQUI'); // <--- PON TU PUBLIC KEY DE MERCADOPAGO
+let metodoPagoSeleccionado = 'mercadopago';
+// REEMPLAZA CON TU PUBLIC KEY DE MERCADO PAGO
+const mp = new MercadoPago('TU_PUBLIC_KEY_AQUI'); 
 
 async function cargarCatalogo() {
     const res = await fetch('/api/perfumes');
     const perfumes = await res.json();
-    
-    const contenedor = document.getElementById('catalogo');
-    contenedor.innerHTML = '';
+    const container = document.getElementById('catalogo');
+    container.innerHTML = '';
 
-    // Agrupar por categoría
     const grupos = {};
     perfumes.forEach(p => {
         if (!grupos[p.categoria]) grupos[p.categoria] = [];
@@ -18,55 +18,46 @@ async function cargarCatalogo() {
     for (const [cat, items] of Object.entries(grupos)) {
         const section = document.createElement('div');
         section.className = 'category-section';
-        section.innerHTML = `
-            <h2 class="category-title">${cat}</h2>
-            <div class="products-grid">
-                ${items.map(p => `
-                    <div class="product-card">
-                        <img src="${p.imagen_url}" alt="${p.nombre}">
-                        <h3>${p.nombre}</h3>
-                        <p style="color:#888;">${p.descripcion || ''}</p>
-                        <p style="font-weight:bold; font-size:1.2rem;">$${p.precio}</p>
-                        <button class="btn-add" onclick="agregarAlCarrito(${p.id}, '${p.nombre}', ${p.precio})">
-                            Agregar al Carrito
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-        contenedor.appendChild(section);
+        section.innerHTML = `<h2 class="category-title">${cat}</h2><div class="products-grid"></div>`;
+        const grid = section.querySelector('.products-grid');
+        
+        items.forEach(p => {
+            grid.innerHTML += `
+                <div class="product-card">
+                    <img src="${p.imagen_url}" alt="${p.nombre}">
+                    <h3>${p.nombre}</h3>
+                    <p style="color:#888; font-size:0.9rem;">${p.descripcion || ''}</p>
+                    <p style="font-weight:bold; font-size:1.2rem;">$${p.precio}</p>
+                    <button class="btn-add" onclick="agregarAlCarrito(${p.id}, '${p.nombre}', ${p.precio})">Agregar</button>
+                </div>
+            `;
+        });
+        container.appendChild(section);
     }
 }
 
 function agregarAlCarrito(id, title, unit_price) {
-    const existe = carrito.find(item => item.id === id);
-    if (existe) {
-        existe.quantity++;
-    } else {
-        carrito.push({ id, title, unit_price, quantity: 1 });
-    }
+    const existe = carrito.find(i => i.id === id);
+    if (existe) existe.quantity++;
+    else carrito.push({ id, title, unit_price, quantity: 1 });
     actualizarCarritoUI();
-    alert('Agregado al carrito');
+    toggleCart(); // Abre el carrito al agregar
 }
 
 function actualizarCarritoUI() {
-    document.getElementById('cart-count').innerText = carrito.reduce((acc, item) => acc + item.quantity, 0);
-    
-    const itemsDiv = document.getElementById('cart-items');
-    itemsDiv.innerHTML = carrito.map((item, index) => `
-        <div class="cart-item">
-            <span>${item.title} x${item.quantity}</span>
-            <span>$${item.unit_price * item.quantity}</span>
-            <button onclick="eliminarItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">X</button>
+    document.getElementById('cart-count').innerText = carrito.reduce((a, b) => a + b.quantity, 0);
+    const div = document.getElementById('cart-items');
+    div.innerHTML = carrito.map((item, idx) => `
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+            <span>${item.title} (x${item.quantity})</span>
+            <span>$${item.unit_price * item.quantity} <span onclick="eliminarItem(${idx})" style="color:red; cursor:pointer; margin-left:10px;">&times;</span></span>
         </div>
     `).join('');
-    
-    const total = carrito.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
-    document.getElementById('cart-total').innerText = total;
+    document.getElementById('cart-total').innerText = carrito.reduce((a, b) => a + (b.unit_price * b.quantity), 0);
 }
 
-function eliminarItem(index) {
-    carrito.splice(index, 1);
+function eliminarItem(idx) {
+    carrito.splice(idx, 1);
     actualizarCarritoUI();
 }
 
@@ -75,27 +66,47 @@ function toggleCart() {
     modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
 }
 
-async function pagar() {
-    const nombre = document.getElementById('cliente-nombre').value;
-    const tel = document.getElementById('cliente-tel').value;
+function selectPago(metodo) {
+    metodoPagoSeleccionado = metodo;
+    document.getElementById('opt-mp').classList.toggle('selected', metodo === 'mercadopago');
+    document.getElementById('opt-transf').classList.toggle('selected', metodo === 'transferencia');
+    // Ocultar cosas previas
+    document.getElementById('wallet_container').innerHTML = '';
+    document.getElementById('info-transferencia').style.display = 'none';
+}
 
-    if (!nombre || !tel || carrito.length === 0) return alert('Completa tus datos y agrega productos');
+async function finalizarCompra() {
+    const nombre = document.getElementById('c-nombre').value;
+    const tel = document.getElementById('c-tel').value;
+    const dir = document.getElementById('c-dir').value;
 
-    const res = await fetch('/api/create_preference', {
+    if (!nombre || !tel || !dir || carrito.length === 0) return alert('Por favor completa todos los datos de envío y agrega productos.');
+
+    const res = await fetch('/api/nueva-orden', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
             items: carrito,
-            comprador: { nombre, telefono: tel }
+            comprador: { nombre, telefono: tel, direccion: dir },
+            metodo_pago: metodoPagoSeleccionado
         })
     });
-    
+
     const data = await res.json();
-    if (data.id) {
-        mp.bricks().create("wallet", "wallet_container", {
-            initialization: { preferenceId: data.id },
-        });
+
+    if (data.type === 'mp') {
+        mp.bricks().create("wallet", "wallet_container", { initialization: { preferenceId: data.id } });
+    } else if (data.type === 'transfer') {
+        document.getElementById('info-transferencia').style.display = 'block';
+        const msg = `Hola! Acabo de hacer un pedido de perfumes (Orden #${data.id}). Te envío el comprobante de transferencia.`;
+        document.getElementById('btn-whatsapp-pedido').href = `https://wa.me/59899822758?text=${encodeURIComponent(msg)}`;
+        alert('Pedido registrado. Por favor realiza la transferencia para procesar el envío.');
     }
+}
+
+// FAQ Logic
+function toggleFaq(element) {
+    element.classList.toggle('active');
 }
 
 cargarCatalogo();

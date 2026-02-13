@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JART'S Perfumes</title>
+    <title>JART'S - Perfumes Exclusivos</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
@@ -18,28 +18,74 @@
         </div>
     </header>
 
-    <div style="background:#f4f4f4; padding:40px; text-align:center;">
-        <h1 style="font-weight:300; letter-spacing:5px;">ESENCIA ÚNICA</h1>
-        <p style="color:#666;">Descubre la colección exclusiva</p>
+    <div style="background:#f8f8f8; padding:60px 20px; text-align:center; border-bottom:1px solid #eee;">
+        <h1 style="font-weight:300; letter-spacing:5px; margin:0;">ESENCIA ÚNICA</h1>
+        <p style="color:#777; margin-top:10px;">Descubre nuestra colección exclusiva</p>
     </div>
 
     <div class="container" id="catalogo">
         <p style="text-align:center; padding:50px;">Cargando fragancias...</p>
     </div>
 
+    <div class="faq-container">
+        <h2 style="text-align:center; text-transform:uppercase; letter-spacing:2px; margin-bottom:30px;">Información Importante</h2>
+        
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question"><span>Políticas de Envío</span> <i class="fa fa-chevron-down"></i></div>
+            <div class="faq-answer">
+                Realizamos envíos a todo el país. Una vez confirmado el pago, procesamos tu pedido en 24hs hábiles. 
+                Es fundamental que proporciones tu <strong>dirección completa y referencias</strong> para asegurar la entrega correcta.
+            </div>
+        </div>
+        
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question"><span>Métodos de Pago</span> <i class="fa fa-chevron-down"></i></div>
+            <div class="faq-answer">
+                Aceptamos todas las tarjetas a través de <strong>Mercado Pago</strong> y también transferencias bancarias directas (BROU).
+            </div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question"><span>Cambios y Devoluciones</span> <i class="fa fa-chevron-down"></i></div>
+            <div class="faq-answer">
+                Si el producto llegó dañado, contáctanos dentro de las 48hs hábiles. Los perfumes abiertos no tienen cambio salvo defecto de fábrica.
+            </div>
+        </div>
+    </div>
+
     <div id="cart-modal" class="modal">
         <div class="modal-content">
-            <h2 style="display:flex; justify-content:space-between;">
-                Tu Carrito <span onclick="toggleCart()" style="cursor:pointer;">&times;</span>
-            </h2>
-            <div id="cart-items"></div>
-            <h3 style="text-align:right;">Total: $<span id="cart-total">0</span></h3>
+            <span class="close-modal" onclick="toggleCart()">&times;</span>
+            <h2>Tu Carrito</h2>
+            <div id="cart-items" style="margin-bottom:20px;"></div>
+            <h3 style="text-align:right; border-top:1px solid #eee; padding-top:10px;">Total: $<span id="cart-total">0</span></h3>
             
-            <input type="text" id="cliente-nombre" placeholder="Tu Nombre" style="width:100%; padding:10px; margin-bottom:10px;">
-            <input type="tel" id="cliente-tel" placeholder="Tu Teléfono" style="width:100%; padding:10px; margin-bottom:10px;">
+            <h4 style="margin-top:20px;">Datos de Envío</h4>
+            <input type="text" id="c-nombre" class="form-input" placeholder="Nombre Completo">
+            <input type="tel" id="c-tel" class="form-input" placeholder="Teléfono / WhatsApp">
+            <input type="text" id="c-dir" class="form-input" placeholder="Dirección Completa (Calle, Nro, Ciudad)">
             
-            <button class="btn-checkout" onclick="pagar()">Ir a Pagar</button>
+            <h4>Forma de Pago</h4>
+            <div class="payment-option selected" id="opt-mp" onclick="selectPago('mercadopago')">
+                <i class="fa fa-credit-card" style="color:#009ee3;"></i> Mercado Pago (Tarjetas / Redes)
+            </div>
+            <div class="payment-option" id="opt-transf" onclick="selectPago('transferencia')">
+                <i class="fa fa-university" style="color:#d4af37;"></i> Transferencia Bancaria (BROU)
+            </div>
+
+            <button class="btn-add" onclick="finalizarCompra()" style="margin-top:20px; font-size:1.1rem; padding:15px;">Confirmar Pedido</button>
+            
             <div id="wallet_container"></div>
+
+            <div id="info-transferencia" style="display:none; margin-top:20px; background:#f9f9f9; padding:15px; border-radius:8px; font-size:0.9rem;">
+                <p><strong>Datos para el depósito:</strong></p>
+                <p>Banco: <strong>BROU</strong></p>
+                <p>Cuenta Dólares: <strong>110356121-0002</strong></p>
+                <p>Titular: <strong>Leonardo Javier Da Costa González</strong></p>
+                <hr style="border:0; border-top:1px solid #ddd; margin:10px 0;">
+                <p>⚠️ Una vez realizado, envía el comprobante por WhatsApp.</p>
+                <a id="btn-whatsapp-pedido" href="#" class="btn-add" style="display:block; text-align:center; text-decoration:none; background:#25d366;">Enviar Comprobante</a>
+            </div>
         </div>
     </div>
 
@@ -48,8 +94,8 @@
     </a>
 
     <footer>
-        <p>Desarrollado con <i class="fa fa-heart" style="color:#d4af37"></i> por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p>
-        <p>&copy; 2026 JART'S Perfumes.</p>
+        <p>Desarrollado con ❤️ por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p>
+        <p>&copy; 2026 JART'S Perfumes. Todos los derechos reservados.</p>
     </footer>
 
     <script src="app.js"></script>
