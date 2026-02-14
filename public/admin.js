@@ -139,36 +139,47 @@ async function guardarEdicion() {
 
 // --- 4. GESTIÓN DE PEDIDOS ---
 async function cargarPedidos() {
-    const res = await fetch('/api/admin/ordenes');
-    const ords = await res.json();
-    const tbody = document.querySelector('#tabla-pedidos tbody');
-    
-    if (ords.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay órdenes registradas.</td></tr>';
-        return;
-    }
+    try {
+        const res = await fetch('/api/admin/ordenes');
+        
+        // Verificamos si la respuesta del servidor es correcta
+        if (!res.ok) {
+            console.error('Error al cargar órdenes:', res.statusText);
+            return;
+        }
 
-    tbody.innerHTML = ords.map(o => `
-        <tr>
-            <td style="font-weight:bold; color:var(--accent);">#${o.id}</td>
-            <td>
-                <strong>${o.cliente_nombre}</strong><br>
-                📞 ${o.cliente_telefono}<br>
-                📍 <small style="color:#666;">${o.cliente_direccion || 'No especificada'}</small>
-            </td>
-            <td>
-                <strong style="font-size:1.1rem;">$${o.total}</strong><br>
-                <small style="background:#f0f0f0; padding:2px 5px; border-radius:3px;">${o.metodo_pago.toUpperCase()}</small>
-            </td>
-            <td>
-                <select onchange="cambiarEstado(${o.id}, this.value)" style="padding:5px; font-weight:bold; cursor:pointer;">
-                    <option value="Pendiente" ${o.estado === 'Pendiente' ? 'selected' : ''}>Pendiente ⏱️</option>
-                    <option value="Pagado" ${o.estado === 'Pagado' ? 'selected' : ''}>Pagado 💰</option>
-                    <option value="Enviado" ${o.estado === 'Enviado' ? 'selected' : ''}>Enviado 📦</option>
-                </select>
-            </td>
-        </tr>
-    `).join('');
+        const ords = await res.json();
+        const tbody = document.querySelector('#tabla-pedidos tbody');
+        
+        if (!ords || ords.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay órdenes registradas.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = ords.map(o => `
+            <tr>
+                <td style="font-weight:bold; color:var(--accent);">#${o.id}</td>
+                <td>
+                    <strong>${o.cliente_nombre}</strong><br>
+                    📞 ${o.cliente_telefono}<br>
+                    📍 <small style="color:#666;">${o.cliente_direccion || 'No especificada'}</small>
+                </td>
+                <td>
+                    <strong style="font-size:1.1rem;">$${o.total}</strong><br>
+                    <small style="background:#f0f0f0; padding:2px 5px; border-radius:3px;">${o.metodo_pago ? o.metodo_pago.toUpperCase() : 'N/A'}</small>
+                </td>
+                <td>
+                    <select onchange="cambiarEstado(${o.id}, this.value)" style="padding:5px; font-weight:bold; cursor:pointer;">
+                        <option value="Pendiente" ${o.estado === 'Pendiente' ? 'selected' : ''}>Pendiente ⏱️</option>
+                        <option value="Pagado" ${o.estado === 'Pagado' ? 'selected' : ''}>Pagado 💰</option>
+                        <option value="Enviado" ${o.estado === 'Enviado' ? 'selected' : ''}>Enviado 📦</option>
+                    </select>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Hubo un problema al cargar los pedidos:', error);
+    }
 }
 
 async function cambiarEstado(id, estado) { 
