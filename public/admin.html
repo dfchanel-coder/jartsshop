@@ -6,68 +6,119 @@
     <title>Admin JART'S</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .admin-box { max-width: 900px; margin: 40px auto; background: white; padding: 20px; border-radius: 10px; }
-        .nav-tabs button { padding: 10px 20px; border: none; background: #eee; cursor: pointer; margin-right: 5px; }
+        .admin-box { max-width: 1000px; margin: 40px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .nav-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px; }
+        .nav-tabs button { padding: 12px 20px; border: none; background: #eee; cursor: pointer; border-radius: 5px; font-weight: 600; transition: 0.3s; }
+        .nav-tabs button:hover { background: #ddd; }
         .nav-tabs button.active { background: var(--accent); color: white; }
-        .tab-content { display: none; padding: 20px; border: 1px solid #eee; }
+        
+        .tab-content { display: none; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
-        input, textarea, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; font-size: 0.95rem; }
+        th { background: #f9f9f9; text-transform: uppercase; letter-spacing: 1px; }
+        
+        input, textarea, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .btn-accion { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-editar { background: #d4af37; }
+        .btn-borrar { background: #e74c3c; }
     </style>
 </head>
 <body>
-    <div id="login-view" style="max-width:300px; margin:100px auto; text-align:center;">
-        <h2>Admin Jart's</h2>
+
+    <div id="login-view" style="max-width:350px; margin:100px auto; text-align:center; background:white; padding:40px; border-radius:10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+        <h2>Panel de Control</h2>
         <input type="text" id="user" placeholder="Usuario">
         <input type="password" id="pass" placeholder="Contraseña">
-        <button class="btn-add" onclick="login()">Entrar</button>
+        <button class="btn-add" onclick="login()" style="margin-top:20px;">Ingresar</button>
     </div>
 
     <div id="dashboard-view" class="admin-box" style="display:none;">
-        <div style="display:flex; justify-content:space-between;">
-            <h2>Panel de Control</h2>
-            <button onclick="logout()" style="background:red; color:white; border:none; padding:5px 10px; border-radius:5px;">Salir</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; border-bottom:2px solid #eee; padding-bottom:10px;">
+            <h1 style="margin:0;">JART'S Admin</h1>
+            <button onclick="logout()" class="btn-accion btn-borrar" style="padding:10px 20px;">Cerrar Sesión</button>
         </div>
+
         <div class="nav-tabs">
-            <button onclick="showTab('nuevo')" class="active">Nuevo</button>
-            <button onclick="showTab('inventario')">Inventario</button>
-            <button onclick="showTab('pedidos')">Pedidos</button>
+            <button onclick="showTab('nuevo', this)" class="tab-btn active">Cargar Producto</button>
+            <button onclick="showTab('inventario', this)" class="tab-btn">Inventario</button>
+            <button onclick="showTab('pedidos', this)" class="tab-btn">Órdenes</button>
+            <button onclick="showTab('resenas', this)" class="tab-btn">Reseñas (Moderar)</button>
         </div>
 
         <div id="tab-nuevo" class="tab-content" style="display:block;">
-            <h3>Cargar Perfume</h3>
-            <input type="text" id="n-nombre" placeholder="Nombre">
-            <input type="number" id="n-precio" placeholder="Precio">
-            <input type="text" id="n-cat" placeholder="Categoría">
-            <input type="url" id="n-img" placeholder="URL Imagen">
-            <textarea id="n-desc" placeholder="Descripción"></textarea>
-            <button class="btn-add" onclick="crearProducto()">Publicar</button>
+            <h3 style="margin-top:0;">Nuevo Perfume</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <input type="text" id="n-nombre" placeholder="Nombre del Perfume">
+                <input type="number" id="n-precio" placeholder="Precio ($)">
+                <input type="text" id="n-cat" placeholder="Categoría (Ej: Hombres, Verano)">
+                <input type="url" id="n-img" placeholder="Link Directo Imagen (Postimages)">
+            </div>
+            <textarea id="n-desc" placeholder="Descripción de la fragancia..." rows="4" style="margin-top:15px;"></textarea>
+            <button class="btn-add" onclick="crearProducto()" style="width:auto; padding:10px 30px; margin-top:15px;">Publicar Producto</button>
         </div>
 
         <div id="tab-inventario" class="tab-content">
-            <h3>Inventario</h3>
-            <table id="tabla-inv"><thead><tr><th>Img</th><th>Nombre</th><th>Acción</th></tr></thead><tbody></tbody></table>
+            <h3 style="margin-top:0;">Gestión de Productos</h3>
+            <table id="tabla-inv">
+                <thead>
+                    <tr>
+                        <th>Img</th>
+                        <th>Detalle</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
 
         <div id="tab-pedidos" class="tab-content">
-            <h3>Pedidos</h3>
-            <table id="tabla-pedidos"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead><tbody></tbody></table>
+            <h3 style="margin-top:0;">Listado de Órdenes</h3>
+            <table id="tabla-pedidos">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente / Envío</th>
+                        <th>Monto / Pago</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="tab-resenas" class="tab-content">
+            <h3 style="margin-top:0;">Moderación de Comentarios</h3>
+            <p style="color:#666; font-size:0.9rem; margin-bottom:20px;">Si borras una reseña, desaparecerá permanentemente de la tienda pública.</p>
+            <table id="tabla-resenas">
+                <thead>
+                    <tr>
+                        <th>Perfume</th>
+                        <th>Usuario</th>
+                        <th>Comentario</th>
+                        <th>⭐</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
     <div id="modal-edit" class="modal" style="z-index:2000;">
         <div class="modal-content">
             <span class="close-modal" onclick="document.getElementById('modal-edit').style.display='none'">&times;</span>
-            <h3>Editar</h3>
+            <h3 style="margin-top:0;">Editar Producto</h3>
             <input type="hidden" id="e-id">
-            <input type="text" id="e-nombre">
-            <input type="number" id="e-precio">
-            <input type="text" id="e-cat">
-            <input type="url" id="e-img">
-            <textarea id="e-desc"></textarea>
-            <button class="btn-add" onclick="guardarEdicion()">Guardar</button>
+            <input type="text" id="e-nombre" placeholder="Nombre">
+            <input type="number" id="e-precio" placeholder="Precio">
+            <input type="text" id="e-cat" placeholder="Categoría">
+            <input type="url" id="e-img" placeholder="URL Imagen">
+            <textarea id="e-desc" rows="4" placeholder="Descripción"></textarea>
+            <button class="btn-add" onclick="guardarEdicion()" style="margin-top:15px; background:var(--accent);">Guardar Cambios</button>
         </div>
     </div>
+
     <script src="admin.js"></script>
 </body>
 </html>

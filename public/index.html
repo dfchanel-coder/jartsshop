@@ -3,52 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <title>JART'S - Perfumes Exclusivos y Originales</title>
-    <meta name="description" content="Descubre la mejor colección de perfumes exclusivos en JART'S. Fragancias únicas con envío a todo Uruguay. Calidad garantizada.">
-    <meta name="keywords" content="perfumes, fragancias, Jarts, Uruguay, Rivera, Montevideo, comprar perfumes, importados, ofertas, regalos">
-    <meta name="author" content="FB Informática">
-    <meta name="robots" content="index, follow">
-
+    <title>JART'S - Perfumes Exclusivos</title>
+    <meta name="description" content="Perfumes exclusivos. Fragancias únicas con envío a todo Uruguay.">
     <meta property="og:title" content="JART'S - Perfumes Exclusivos">
-    <meta property="og:description" content="Encuentra tu esencia única. Catálogo completo de fragancias con envíos a todo el país.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://jarts-shop.onrender.com">
-    <meta property="og:site_name" content="JART'S Perfumes">
+    <meta property="og:description" content="Encuentra tu esencia única. Catálogo completo de fragancias.">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
 <body>
-
     <header>
-        <div class="logo">JART'S</div>
-        <div class="cart-icon" onclick="toggleCart()">
-            <i class="fa fa-shopping-bag"></i>
-            <span id="cart-count">0</span>
-        </div>
+        <div class="logo" onclick="window.location.reload()">JART'S</div>
+        <div class="cart-icon" onclick="toggleCart()"><i class="fa fa-shopping-bag"></i><span id="cart-count">0</span></div>
     </header>
 
     <main>
         <div style="background:#f8f8f8; padding:60px 20px; text-align:center; border-bottom:1px solid #eee;">
             <h1 style="font-weight:300; letter-spacing:5px; margin:0;">ESENCIA ÚNICA</h1>
-            <p style="color:#777; margin-top:10px;">Descubre nuestra colección exclusiva</p>
+            <p style="color:#777; margin-top:10px;">Descubre nuestra colección</p>
         </div>
-
-        <div class="container" id="catalogo">
-            <p style="text-align:center; padding:50px;">Cargando fragancias...</p>
-        </div>
+        <div class="container" id="catalogo"><p style="text-align:center; padding:50px;">Cargando...</p></div>
 
         <section class="faq-container">
             <h2 style="text-align:center; margin-bottom:30px;">INFORMACIÓN</h2>
-            <div class="faq-item" onclick="this.classList.toggle('active')">
-                <strong>Políticas de Envío <i class="fa fa-chevron-down"></i></strong>
-                <div class="faq-answer">Envíos a todo el país. Procesamos en 24hs hábiles tras el pago. Es esencial proveer la dirección correcta.</div>
-            </div>
-            <div class="faq-item" onclick="this.classList.toggle('active')">
-                <strong>Métodos de Pago <i class="fa fa-chevron-down"></i></strong>
-                <div class="faq-answer">Aceptamos Mercado Pago y Transferencia BROU Dólares.</div>
-            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')"><strong>Políticas de Envío <i class="fa fa-chevron-down"></i></strong><div class="faq-answer">Envíos a todo el país. Procesamos en 24hs hábiles.</div></div>
+            <div class="faq-item" onclick="this.classList.toggle('active')"><strong>Métodos de Pago <i class="fa fa-chevron-down"></i></strong><div class="faq-answer">Aceptamos Mercado Pago y Transferencia BROU Dólares.</div></div>
         </section>
     </main>
 
@@ -56,23 +35,16 @@
         <div class="modal-content">
             <span class="close-modal" onclick="cerrarResenas()">&times;</span>
             <h2 id="resena-titulo" style="border-bottom: 1px solid #eee; padding-bottom: 10px;">Reseñas</h2>
-            
-            <div id="lista-resenas" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; padding-right:10px;">
-                </div>
-            
+            <div id="lista-resenas" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px;"></div>
             <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-            <h3 style="font-size:1.1rem; margin-bottom:10px;">Dejar una reseña</h3>
+            <h3 style="font-size:1.1rem; margin-bottom:10px;">Dejar reseña</h3>
             <input type="hidden" id="r-perfume-id">
             <input type="text" id="r-nombre" class="form-input" placeholder="Tu Nombre">
             <select id="r-estrellas" class="form-input">
-                <option value="5">⭐⭐⭐⭐⭐ Excelente</option>
-                <option value="4">⭐⭐⭐⭐ Muy Bueno</option>
-                <option value="3">⭐⭐⭐ Bueno</option>
-                <option value="2">⭐⭐ Regular</option>
-                <option value="1">⭐ Malo</option>
+                <option value="5">⭐⭐⭐⭐⭐ Excelente</option><option value="4">⭐⭐⭐⭐ Muy Bueno</option><option value="3">⭐⭐⭐ Bueno</option><option value="2">⭐⭐ Regular</option><option value="1">⭐ Malo</option>
             </select>
-            <textarea id="r-comentario" class="form-input" placeholder="¿Qué te pareció el perfume?" rows="3"></textarea>
-            <button class="btn-add" onclick="enviarResena()" style="background:#25d366;">Publicar Reseña</button>
+            <textarea id="r-comentario" class="form-input" placeholder="¿Qué te pareció?" rows="3"></textarea>
+            <button class="btn-add" onclick="enviarResena()" style="background:#25d366;">Publicar</button>
         </div>
     </div>
 
@@ -86,17 +58,13 @@
             <h4 style="margin-top:20px;">Datos de Envío</h4>
             <input type="text" id="c-nombre" class="form-input" placeholder="Nombre Completo">
             <input type="tel" id="c-tel" class="form-input" placeholder="Teléfono / WhatsApp">
-            <input type="text" id="c-dir" class="form-input" placeholder="Dirección Completa (Calle, Nro, Ciudad)">
+            <input type="text" id="c-dir" class="form-input" placeholder="Dirección (Calle, Nro, Ciudad)">
             
-            <h4>Forma de Pago</h4>
-            <div class="payment-option selected" id="opt-mp" onclick="selectPago('mercadopago')">
-                <i class="fa fa-credit-card" style="color:#009ee3;"></i> Mercado Pago
-            </div>
-            <div class="payment-option" id="opt-transf" onclick="selectPago('transferencia')">
-                <i class="fa fa-university" style="color:#d4af37;"></i> Transferencia BROU
-            </div>
+            <h4>Pago</h4>
+            <div class="payment-option selected" id="opt-mp" onclick="selectPago('mercadopago')"><i class="fa fa-credit-card" style="color:#009ee3;"></i> Mercado Pago</div>
+            <div class="payment-option" id="opt-transf" onclick="selectPago('transferencia')"><i class="fa fa-university" style="color:#d4af37;"></i> Transferencia BROU</div>
 
-            <button class="btn-add" onclick="finalizarCompra()" style="margin-top:20px; font-size:1.1rem; padding:15px;">Confirmar Pedido</button>
+            <button class="btn-add" onclick="finalizarCompra()" style="margin-top:20px; padding:15px;">Confirmar Pedido</button>
             <div id="wallet_container"></div>
 
             <div id="info-transferencia" style="display:none; margin-top:20px; background:#f9f9f9; padding:15px; border-radius:8px;">
@@ -108,12 +76,7 @@
     </div>
 
     <a href="https://wa.me/59899822758" class="whatsapp-float" target="_blank"><i class="fab fa-whatsapp"></i></a>
-
-    <footer>
-        <p>Desarrollado con ❤️ por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p>
-        <p>&copy; 2026 JART'S Perfumes.</p>
-    </footer>
-
+    <footer><p>Desarrollado por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p><p>&copy; 2026 JART'S.</p></footer>
     <script src="app.js"></script>
 </body>
 </html>

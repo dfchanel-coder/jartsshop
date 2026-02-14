@@ -25,34 +25,26 @@ const pool = new Pool({
 async function iniciarDB() {
     try {
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS usuarios_admin (
-                id SERIAL PRIMARY KEY, usuario VARCHAR(50) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS perfumes (
-                id SERIAL PRIMARY KEY, nombre VARCHAR(255) NOT NULL, precio DECIMAL(10, 2) NOT NULL, categoria VARCHAR(100) NOT NULL, imagen_url TEXT NOT NULL, descripcion TEXT, activo BOOLEAN DEFAULT true
-            );
-            CREATE TABLE IF NOT EXISTS ordenes (
-                id SERIAL PRIMARY KEY, cliente_nombre VARCHAR(100), cliente_telefono VARCHAR(50), cliente_direccion TEXT, metodo_pago VARCHAR(50), items_json TEXT, total DECIMAL(10, 2), estado VARCHAR(50) DEFAULT 'Pendiente', fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS resenas (
-                id SERIAL PRIMARY KEY, perfume_id INT NOT NULL, nombre VARCHAR(100) NOT NULL, estrellas INT NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5), comentario TEXT, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+            CREATE TABLE IF NOT EXISTS usuarios_admin (id SERIAL PRIMARY KEY, usuario VARCHAR(50) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL);
+            CREATE TABLE IF NOT EXISTS perfumes (id SERIAL PRIMARY KEY, nombre VARCHAR(255) NOT NULL, precio DECIMAL(10, 2) NOT NULL, categoria VARCHAR(100) NOT NULL, imagen_url TEXT NOT NULL, descripcion TEXT, activo BOOLEAN DEFAULT true);
+            CREATE TABLE IF NOT EXISTS ordenes (id SERIAL PRIMARY KEY, cliente_nombre VARCHAR(100), cliente_telefono VARCHAR(50), cliente_direccion TEXT, metodo_pago VARCHAR(50), items_json TEXT, total DECIMAL(10, 2), estado VARCHAR(50) DEFAULT 'Pendiente', fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE IF NOT EXISTS resenas (id SERIAL PRIMARY KEY, perfume_id INT NOT NULL, nombre VARCHAR(100) NOT NULL, estrellas INT NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5), comentario TEXT, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
         `);
-        console.log('--- BASE DE DATOS INICIADA ---');
+        console.log('--- BASE DE DATOS OK ---');
     } catch (err) { console.error('Error DB:', err); }
 }
 iniciarDB();
 
 let client;
 try { client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || 'DUMMY_TOKEN' }); } 
-catch (e) { console.log('Esperando token de MP...'); }
+catch (e) { console.log('Esperando MP...'); }
 
 const requireAuth = (req, res, next) => {
     if (!req.session.userId) return res.status(401).json({ error: 'No autorizado' });
     next();
 };
 
-// --- RUTAS PÚBLICAS PRODUCTOS ---
+// --- PÚBLICO: PRODUCTOS Y RESEÑAS ---
 app.get('/api/perfumes', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM perfumes ORDER BY id DESC');
@@ -60,7 +52,6 @@ app.get('/api/perfumes', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- NUEVO: RUTAS DE RESEÑAS ---
 app.get('/api/perfumes/:id/resenas', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM resenas WHERE perfume_id = $1 ORDER BY fecha DESC', [req.params.id]);
@@ -71,59 +62,60 @@ app.get('/api/perfumes/:id/resenas', async (req, res) => {
 app.post('/api/perfumes/:id/resenas', async (req, res) => {
     const { nombre, estrellas, comentario } = req.body;
     try {
-        await pool.query(
-            'INSERT INTO resenas (perfume_id, nombre, estrellas, comentario) VALUES ($1, $2, $3, $4)',
-            [req.params.id, nombre, estrellas, comentario]
-        );
+        await pool.query('INSERT INTO resenas (perfume_id, nombre, estrellas, comentario) VALUES ($1, $2, $3, $4)', [req.params.id, nombre, estrellas, comentario]);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- AUTH & ADMIN ---
+// --- ADMIN: LOGIN Y SETUP ---
 app.post('/api/login', async (req, res) => {
-    const { usuario, password } = req.body;
     try {
-        const result = await pool.query('SELECT * FROM usuarios_admin WHERE usuario = $1', [usuario]);
-        if (result.rows.length === 0) return res.status(401).json({ error: 'Usuario no encontrado' });
-        
-        const valid = await bcrypt.compare(password, result.rows[0].password);
-        if (valid) { req.session.userId = result.rows[0].id; res.json({ success: true }); } 
-        else { res.status(401).json({ error: 'Contraseña incorrecta' }); }
+        const result = await pool.query('SELECT * FROM usuarios_admin WHERE usuario = $1', [req.body.usuario]);
+        if (result.rows.length === 0 || !(await bcrypt.compare(req.body.password, result.rows[0].password))) return res.status(401).json({ error: 'Credenciales inválidas' });
+        req.session.userId = result.rows[0].id; res.json({ success: true });
     } catch (err) { res.status(500).json({ error: 'Error interno' }); }
 });
 
-app.get('/api/check-auth', (req, res) => { res.json({ authenticated: !!req.session.userId }); });
+app.get('/api/check-auth', (req, res) => res.json({ authenticated: !!req.session.userId }));
 app.post('/api/logout', (req, res) => { req.session.destroy(); res.json({ success: true }); });
 app.get('/setup-admin', async (req, res) => {
     try {
-        const passHash = await bcrypt.hash('admin123', 10);
-        await pool.query('INSERT INTO usuarios_admin (usuario, password) VALUES ($1, $2) ON CONFLICT DO NOTHING', ['admin', passHash]);
-        res.send('Usuario admin creado: admin / admin123');
+        const hash = await bcrypt.hash('admin123', 10);
+        await pool.query('INSERT INTO usuarios_admin (usuario, password) VALUES ($1, $2) ON CONFLICT DO NOTHING', ['admin', hash]);
+        res.send('Admin OK: admin / admin123');
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// --- ADMIN: CRUD PRODUCTOS ---
 app.post('/api/admin/productos', requireAuth, async (req, res) => {
     const { nombre, precio, categoria, imagen_url, descripcion } = req.body;
-    try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion) VALUES ($1, $2, $3, $4, $5)', [nombre, precio, categoria, imagen_url, descripcion]); res.json({ success: true }); } 
-    catch (err) { res.status(500).send(err.message); }
+    try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion) VALUES ($1, $2, $3, $4, $5)', [nombre, precio, categoria, imagen_url, descripcion]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
 });
 app.put('/api/admin/productos/:id', requireAuth, async (req, res) => {
     const { nombre, precio, categoria, imagen_url, descripcion } = req.body;
-    try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, imagen_url=$4, descripcion=$5 WHERE id=$6', [nombre, precio, categoria, imagen_url, descripcion, req.params.id]); res.json({ success: true }); } 
-    catch (err) { res.status(500).send(err.message); }
+    try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, imagen_url=$4, descripcion=$5 WHERE id=$6', [nombre, precio, categoria, imagen_url, descripcion, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
 });
 app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => {
-    try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } 
-    catch (err) { res.status(500).send(err.message); }
+    try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
 });
 
+// --- ADMIN: ÓRDENES ---
 app.get('/api/admin/ordenes', requireAuth, async (req, res) => {
-    try { const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC'); res.json(result.rows); } 
-    catch (err) { res.status(500).send(err.message); }
+    try { const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
 });
 app.post('/api/admin/orden-estado', requireAuth, async (req, res) => {
-    try { await pool.query('UPDATE ordenes SET estado = $1 WHERE id = $2', [req.body.estado, req.body.id]); res.json({ success: true }); } 
-    catch (err) { res.status(500).send(err.message); }
+    try { await pool.query('UPDATE ordenes SET estado = $1 WHERE id = $2', [req.body.estado, req.body.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- ADMIN: MODERAR RESEÑAS ---
+app.get('/api/admin/resenas', requireAuth, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT r.*, p.nombre AS perfume_nombre FROM resenas r JOIN perfumes p ON r.perfume_id = p.id ORDER BY r.fecha DESC');
+        res.json(result.rows);
+    } catch (err) { res.status(500).send(err.message); }
+});
+app.delete('/api/admin/resenas/:id', requireAuth, async (req, res) => {
+    try { await pool.query('DELETE FROM resenas WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
 });
 
 // --- CHECKOUT ---
@@ -148,18 +140,17 @@ app.post('/api/nueva-orden', async (req, res) => {
             });
             return res.json({ type: 'mp', id: response.id });
         }
-    } catch (error) { res.status(500).json({ error: 'Error procesando orden: ' + error.message }); }
+    } catch (error) { res.status(500).json({ error: 'Error procesando orden' }); }
 });
 
+// --- RUTA DE EMERGENCIA ---
 app.get('/fix-db', async (req, res) => {
     try {
         await pool.query('ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS cliente_direccion TEXT');
         await pool.query('ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS metodo_pago VARCHAR(50)');
-        // Creamos la tabla de reseñas por si no estaba
         await pool.query('CREATE TABLE IF NOT EXISTS resenas (id SERIAL PRIMARY KEY, perfume_id INT NOT NULL, nombre VARCHAR(100) NOT NULL, estrellas INT NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5), comentario TEXT, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
-        res.send('✅ Base de datos actualizada con Reseñas y Dirección.');
-    } catch (err) { res.status(500).send('❌ Error actualizando BD: ' + err.message); }
+        res.send('✅ Base de datos actualizada.');
+    } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
+app.listen(process.env.PORT || 3000, () => console.log('Servidor OK'));
