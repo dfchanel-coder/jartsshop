@@ -208,9 +208,19 @@
             } catch (error) { alert("Error"); btn.disabled = false; }
         }
         
-        // Iniciar
-        configurarIdiomaYMoneda();
-        renderizarResumen();
+        // Iniciar esperando la base de datos primero
+        window.addEventListener('load', async () => {
+            try {
+                // Pedimos la cotización en vivo
+                const res = await fetch('/api/configuracion');
+                const data = await res.json();
+                if(data.cotizacion) cotizacionBRL = data.cotizacion; // Actualizamos la global
+            } catch (e) { console.log('Error de red, usando default'); }
+            
+            // Ahora sí, con la cotización correcta, dibujamos los precios
+            configurarIdiomaYMoneda();
+            renderizarResumen();
+        });
     </script>
 </body>
 </html>
