@@ -3,72 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle Producto - JART'S</title>
+    <title>Detalle del Producto - JART'S</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .detalle-container { max-width: 1000px; margin: 40px auto; padding: 20px; display: flex; flex-wrap: wrap; gap: 40px; background: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-        .detalle-img { flex: 1; min-width: 300px; } .detalle-img img { width: 100%; border-radius: 10px; cursor: zoom-in; }
+        .detalle-container { max-width: 1000px; margin: 40px auto; padding: 30px; display: flex; flex-wrap: wrap; gap: 40px; background: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .detalle-img { flex: 1; min-width: 300px; }
+        .detalle-img img { width: 100%; border-radius: 10px; cursor: zoom-in; transition: transform 0.3s; }
+        .detalle-img img:hover { transform: scale(1.02); }
         .detalle-info { flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center; }
-        .detalle-titulo { font-size: 2.5rem; margin-bottom: 10px; }
-        .btn-comprar { flex: 2; background: var(--text); color: white; padding: 15px; border: none; border-radius: 30px; font-size: 1.1rem; cursor: pointer; }
+        .detalle-titulo { font-size: 2.5rem; margin-bottom: 10px; color: var(--text); }
+        .detalle-precio { font-size: 2rem; font-weight: bold; color: var(--accent); margin-bottom: 20px; }
+        .detalle-desc { color: #666; line-height: 1.6; margin-bottom: 30px; font-size: 1.1rem; }
+        
+        .btn-comprar { width: 100%; background: var(--text); color: white; padding: 20px; border: none; border-radius: 30px; font-size: 1.3rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 15px; }
+        .btn-comprar:hover { background: var(--accent); }
         .btn-compartir { flex: 1; background: #25d366; color: white; padding: 15px; border: none; border-radius: 30px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
+        .btn-compartir:hover { background: #1da851; }
+
+        /* Modal Imagen Completa */
         #modal-img { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; cursor: zoom-out; }
         #modal-img img { max-width: 90%; max-height: 90%; border-radius: 10px; }
+
+        .sugerencias-container { margin-top: 50px; border-top: 1px solid #eee; padding-top: 40px; }
     </style>
 </head>
 <body>
+
     <header>
         <div class="logo" style="cursor:pointer;" onclick="window.location.href='/'">JART'S</div>
-        <div class="cart-icon"><a href="/" style="text-decoration:none; color:inherit;"><i class="fa fa-home"></i> Tienda</a></div>
+        <div class="cart-icon" onclick="toggleCart()">
+            <i class="fa fa-shopping-bag"></i>
+            <span id="cart-count">0</span>
+        </div>
     </header>
 
     <div class="container">
-        <div class="detalle-container" id="producto-detalle"><p style="text-align:center; width:100%;">Cargando...</p></div>
-        <div class="sugerencias-container" style="margin-top:50px; border-top:1px solid #eee; padding-top:30px;">
-            <h3 style="text-align:center;">SUGERENCIAS</h3>
-            <div class="products-grid" id="sugerencias-grid"></div>
+        <div class="detalle-container" id="producto-detalle">
+            <p style="text-align:center; width:100%; color:#888;">Cargando fragancia...</p>
+        </div>
+
+        <div class="sugerencias-container">
+            <h3 style="text-align:center; text-transform:uppercase; letter-spacing:2px; margin-bottom:30px;">También te podría interesar</h3>
+            <div class="products-grid" id="sugerencias-grid">
+                </div>
         </div>
     </div>
-    <div id="modal-img" onclick="this.style.display='none'"><img id="img-ampliada" src=""></div>
 
-    <footer><p>Desarrollado por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p></footer>
+    <div id="modal-img" onclick="this.style.display='none'">
+        <img id="img-ampliada" src="" alt="Imagen Ampliada">
+    </div>
+
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleCart()">&times;</span>
+            <h2 style="margin-top:0;">Tu Carrito</h2>
+            
+            <div id="cart-items" style="margin-bottom:20px; max-height: 50vh; overflow-y: auto;"></div>
+            
+            <h3 style="text-align:right; border-top:2px solid #eee; padding-top:15px; font-size:1.5rem;">Total: $<span id="cart-total">0</span></h3>
+            
+            <button id="btn-ir-pagar" class="btn-add" onclick="irAlCheckout()" style="margin-top:20px; font-size:1.2rem; padding:18px; background:var(--accent);">Iniciar Compra Segura <i class="fa fa-lock"></i></button>
+            <button class="btn-add" onclick="toggleCart()" style="background:#eee; color:#333;">Seguir Mirando</button>
+        </div>
+    </div>
+
+    <footer>
+        <p>Desarrollado con ❤️ por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p>
+        <p>&copy; 2026 JART'S Perfumes.</p>
+    </footer>
+
+    <script src="app.js"></script>
 
     <script>
+        // Lógica específica para renderizar el detalle y las sugerencias
         async function cargarDetalle() {
-            const idProducto = new URLSearchParams(window.location.search).get('id');
-            if (!idProducto) return window.location.href = '/';
-            
+            const urlParams = new URLSearchParams(window.location.search);
+            const idProducto = urlParams.get('id');
+
+            if (!idProducto) {
+                window.location.href = '/'; 
+                return;
+            }
+
             const res = await fetch('/api/perfumes');
             const perfumes = await res.json();
+            
             const producto = perfumes.find(p => p.id == idProducto);
-            if (!producto) { document.getElementById('producto-detalle').innerHTML = '<p>No encontrado.</p>'; return; }
 
-            document.title = `${producto.nombre} - JART'S`;
-            const msjWA = encodeURIComponent(`¡Mirá este perfume en Jart's!\n${producto.nombre}\n$${producto.precio}\n${window.location.href}`);
+            if (!producto) {
+                document.getElementById('producto-detalle').innerHTML = '<p style="text-align:center; width:100%;">Producto no encontrado.</p>';
+                return;
+            }
 
-            document.getElementById('producto-detalle').innerHTML = `
-                <div class="detalle-img"><img src="${producto.imagen_url}" onclick="document.getElementById('img-ampliada').src=this.src; document.getElementById('modal-img').style.display='flex'"></div>
+            document.title = `${producto.nombre} - JART'S Perfumes`;
+
+            const contenedor = document.getElementById('producto-detalle');
+            const msjWA = encodeURIComponent(`¡Mirá este perfume que me encantó en Jart's!\n${producto.nombre} a $${producto.precio}\n\nPodés verlo acá: ${window.location.href}`);
+
+            contenedor.innerHTML = `
+                <div class="detalle-img">
+                    <img src="${producto.imagen_url}" alt="${producto.nombre}" onclick="ampliarImagen('${producto.imagen_url}')">
+                </div>
                 <div class="detalle-info">
-                    <p style="text-transform:uppercase; color:#888;">${producto.categoria}</p>
+                    <p style="text-transform:uppercase; color:#888; letter-spacing:2px; margin-bottom:5px; font-size:0.9rem;">${producto.categoria}</p>
                     <h1 class="detalle-titulo">${producto.nombre}</h1>
-                    <div style="font-size:1.8rem; font-weight:bold; margin-bottom:20px;">$${producto.precio}</div>
-                    <p style="color:#666; margin-bottom:30px; font-size:1.1rem;">${producto.descripcion || 'Sin descripción.'}</p>
-                    <div style="display:flex; gap:15px; margin-bottom:30px;">
-                        <button class="btn-comprar" onclick="window.location.href='/'">Ir a Tienda</button>
-                        <a href="https://wa.me/?text=${msjWA}" target="_blank" class="btn-compartir"><i class="fab fa-whatsapp"></i> Compartir</a>
+                    <div class="detalle-precio">$${producto.precio}</div>
+                    <p class="detalle-desc">${producto.descripcion || 'Sin descripción detallada.'}</p>
+                    
+                    <div style="display:flex; flex-direction:column; gap:15px; margin-bottom:10px;">
+                        <button class="btn-comprar" onclick="agregarAlCarrito(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}', ${producto.precio})">Añadir al Carrito <i class="fa fa-shopping-cart"></i></button>
+                        
+                        <div style="display:flex; gap:15px;">
+                            <button onclick="window.location.href='/'" style="flex:1; background:#f0f0f0; color:#333; padding:15px; border:none; border-radius:30px; font-size:1.1rem; cursor:pointer; font-weight:bold;">Volver a Tienda</button>
+                            <a href="https://wa.me/?text=${msjWA}" target="_blank" class="btn-compartir">
+                                <i class="fab fa-whatsapp"></i> Compartir
+                            </a>
+                        </div>
                     </div>
                 </div>
             `;
 
-            const sugerencias = perfumes.filter(p => p.categoria === producto.categoria && p.id != idProducto).slice(0, 4);
+            // Sugerencias (Misma categoría, excluyendo el actual)
+            const sugerencias = perfumes.filter(p => p.categoria === producto.categoria && p.id != idProducto).slice(0, 4); 
+            const gridSugerencias = document.getElementById('sugerencias-grid');
+
             if (sugerencias.length > 0) {
-                document.getElementById('sugerencias-grid').innerHTML = sugerencias.map(p => `
+                gridSugerencias.innerHTML = sugerencias.map(p => `
                     <div class="product-card" style="cursor:pointer;" onclick="window.location.href='/producto.html?id=${p.id}'">
-                        <img src="${p.imagen_url}"><h3>${p.nombre}</h3><p><strong>$${p.precio}</strong></p>
-                    </div>`).join('');
-            } else { document.querySelector('.sugerencias-container').style.display = 'none'; }
+                        <img src="${p.imagen_url}" alt="${p.nombre}">
+                        <h3 style="margin-bottom:10px;">${p.nombre}</h3>
+                        <p style="font-weight:bold; color:var(--accent); font-size:1.2rem;">$${p.precio}</p>
+                    </div>
+                `).join('');
+            } else {
+                document.querySelector('.sugerencias-container').style.display = 'none';
+            }
         }
+
+        function ampliarImagen(url) {
+            document.getElementById('img-ampliada').src = url;
+            document.getElementById('modal-img').style.display = 'flex';
+        }
+
         cargarDetalle();
     </script>
 </body>

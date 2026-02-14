@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizar Compra - JART'S</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <style>
+        .checkout-container { max-width: 800px; margin: 40px auto; padding: 30px; background: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .checkout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        @media(max-width: 768px) { .checkout-grid { grid-template-columns: 1fr; } }
+        
+        .resumen-orden { background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #eee; }
+        .resumen-item { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 10px 0; font-size: 0.9rem; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
+        
+        .btn-confirmar { background: var(--accent); color: white; border: none; padding: 18px; width: 100%; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 20px; }
+        .btn-confirmar:hover { background: #b8962e; }
+        .btn-confirmar:disabled { background: #ccc; cursor: not-allowed; }
+
+        .pantalla-exito { display: none; text-align: center; padding: 50px 20px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo" style="cursor:pointer;" onclick="window.location.href='/'">JART'S</div>
+        <a href="/" style="color:var(--text); text-decoration:none;"><i class="fa fa-arrow-left"></i> Volver a la Tienda</a>
+    </header>
+
+    <div class="container">
+        <div class="checkout-container" id="checkout-form">
+            <h1 style="text-align:center; margin-bottom:30px;">Finalizar Pedido</h1>
+            
+            <div class="checkout-grid">
+                <div>
+                    <h3>1. Datos Personales</h3>
+                    <div class="form-group"><input type="text" id="c-nombre" class="form-input" placeholder="Nombre y Apellido completo" required></div>
+                    <div class="form-group"><input type="tel" id="c-tel" class="form-input" placeholder="Teléfono / WhatsApp" required></div>
+                    
+                    <h3 style="margin-top:30px;">2. Datos de Envío</h3>
+                    <div class="form-group">
+                        <select id="c-ciudad" class="form-input" required>
+                            <option value="">Selecciona tu Departamento...</option>
+                            <option value="Rivera">Rivera</option>
+                            <option value="Montevideo">Montevideo</option>
+                            <option value="Artigas">Artigas</option>
+                            <option value="Canelones">Canelones</option>
+                            <option value="Cerro Largo">Cerro Largo</option>
+                            <option value="Colonia">Colonia</option>
+                            <option value="Durazno">Durazno</option>
+                            <option value="Flores">Flores</option>
+                            <option value="Florida">Florida</option>
+                            <option value="Lavalleja">Lavalleja</option>
+                            <option value="Maldonado">Maldonado</option>
+                            <option value="Paysandú">Paysandú</option>
+                            <option value="Río Negro">Río Negro</option>
+                            <option value="Salto">Salto</option>
+                            <option value="San José">San José</option>
+                            <option value="Soriano">Soriano</option>
+                            <option value="Tacuarembó">Tacuarembó</option>
+                            <option value="Treinta y Tres">Treinta y Tres</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><input type="text" id="c-dir" class="form-input" placeholder="Calle, Número, Apto / Referencia" required></div>
+
+                    <h3 style="margin-top:30px;">3. Forma de Pago</h3>
+                    <div class="payment-option selected" id="opt-mp" onclick="selectPago('mercadopago')"><i class="fa fa-credit-card" style="color:#009ee3;"></i> Mercado Pago</div>
+                    <div class="payment-option" id="opt-transf" onclick="selectPago('transferencia')"><i class="fa fa-university" style="color:#d4af37;"></i> Transferencia BROU Dólares</div>
+                </div>
+
+                <div>
+                    <div class="resumen-orden">
+                        <h3 style="margin-top:0;">Resumen de Compra</h3>
+                        <div id="checkout-items"></div>
+                        <div style="display:flex; justify-content:space-between; margin-top:20px; font-size:1.5rem; font-weight:bold; border-top:2px solid #ddd; padding-top:15px;">
+                            <span>Total:</span>
+                            <span>$<span id="checkout-total">0</span></span>
+                        </div>
+                    </div>
+
+                    <button id="btn-procesar" class="btn-confirmar" onclick="procesarPedido()">Completar Pedido <i class="fa fa-check"></i></button>
+                    
+                    <div id="wallet_container" style="margin-top:15px;"></div>
+                    <div id="info-transferencia" style="display:none; margin-top:20px; background:#fffbf0; border:1px solid #d4af37; padding:20px; border-radius:8px;">
+                        <h4 style="margin-top:0; color:#d4af37;">Datos Bancarios</h4>
+                        <p><strong>BROU Dólares:</strong> 110356121-0002</p>
+                        <p><strong>Titular:</strong> Leonardo Javier Da Costa González</p>
+                        <p style="font-size:0.85rem; color:#666;">Al confirmar, se registrará tu pedido. Deberás enviarnos el comprobante por WhatsApp.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="checkout-container pantalla-exito" id="pantalla-exito">
+            <i class="fa fa-check-circle" style="font-size:80px; color:#25d366; margin-bottom:20px;"></i>
+            <h1 style="color:var(--text);">¡Pedido Recibido!</h1>
+            <p style="font-size:1.2rem; color:#666; margin-bottom:30px;">Tu número de orden es: <strong id="numero-orden" style="color:var(--accent);"></strong></p>
+            
+            <div id="instrucciones-transferencia" style="display:none; margin-bottom:30px; padding:20px; background:#f9f9f9; border-radius:10px;">
+                <p>Por favor, realiza la transferencia BROU y envíanos el comprobante para despachar tu perfume.</p>
+                <a id="btn-wa-comprobante" href="#" class="btn-add" style="display:inline-block; width:auto; padding:15px 30px; background:#25d366; text-decoration:none;"><i class="fab fa-whatsapp"></i> Enviar Comprobante</a>
+            </div>
+
+            <button class="btn-add" onclick="window.location.href='/'" style="width:auto; padding:15px 30px;">Volver a la Tienda</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Lógica específica del Checkout
+        const mpCheckout = new MercadoPago('TU_PUBLIC_KEY_AQUI'); // Pon tu clave pública
+        let metodoPago = 'mercadopago';
+
+        function renderizarResumen() {
+            if (carrito.length === 0) {
+                alert('Tu carrito está vacío.');
+                window.location.href = '/';
+                return;
+            }
+            const div = document.getElementById('checkout-items');
+            div.innerHTML = carrito.map(item => `
+                <div class="resumen-item">
+                    <span>${item.quantity}x ${item.title}</span>
+                    <strong>$${item.unit_price * item.quantity}</strong>
+                </div>
+            `).join('');
+            document.getElementById('checkout-total').innerText = carrito.reduce((a, b) => a + (b.unit_price * b.quantity), 0);
+        }
+
+        function selectPago(metodo) {
+            metodoPago = metodo;
+            document.getElementById('opt-mp').classList.toggle('selected', metodo === 'mercadopago');
+            document.getElementById('opt-transf').classList.toggle('selected', metodo === 'transferencia');
+            document.getElementById('wallet_container').innerHTML = '';
+            document.getElementById('info-transferencia').style.display = metodo === 'transferencia' ? 'block' : 'none';
+        }
+
+        async function procesarPedido() {
+            const nombre = document.getElementById('c-nombre').value.trim();
+            const tel = document.getElementById('c-tel').value.trim();
+            const ciudad = document.getElementById('c-ciudad').value;
+            const dir = document.getElementById('c-dir').value.trim();
+
+            if (!nombre || !tel || !ciudad || !dir) {
+                return alert('Por favor, completa todos los campos del formulario.');
+            }
+
+            // 1. Deshabilitar botón (Anti-Spam)
+            const btn = document.getElementById('btn-procesar');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
+
+            const direccionCompleta = `${dir}, ${ciudad}`;
+
+            try {
+                const res = await fetch('/api/nueva-orden', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: carrito, comprador: { nombre, telefono: tel, direccion: direccionCompleta }, metodo_pago: metodoPago })
+                });
+
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                if (data.type === 'mp') {
+                    // Cargar Mercado Pago y ocultar botón de procesar
+                    btn.style.display = 'none'; 
+                    mpCheckout.bricks().create("wallet", "wallet_container", { initialization: { preferenceId: data.id } });
+                    // No vaciamos carrito aún porque no ha pagado. MP redirige luego.
+                } else if (data.type === 'transfer') {
+                    // Éxito: Transferencia
+                    document.getElementById('checkout-form').style.display = 'none';
+                    document.getElementById('pantalla-exito').style.display = 'block';
+                    document.getElementById('numero-orden').innerText = `#${data.id}`;
+                    
+                    document.getElementById('instrucciones-transferencia').style.display = 'block';
+                    const msg = encodeURIComponent(`Hola JART'S! Acabo de hacer el pedido #${data.id}. Te envío el comprobante de transferencia BROU.`);
+                    document.getElementById('btn-wa-comprobante').href = `https://wa.me/59899822758?text=${msg}`;
+                    
+                    // 2. Vaciar Carrito global
+                    vaciarCarrito();
+                }
+            } catch (error) {
+                alert(error.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Completar Pedido <i class="fa fa-check"></i>';
+            }
+        }
+
+        renderizarResumen();
+    </script>
+</body>
+</html>
