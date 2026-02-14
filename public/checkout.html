@@ -43,13 +43,13 @@
 
                     <h3 style="margin-top:30px;" id="t-paso3">3. Forma de Pago</h3>
                     <div id="opciones-pago-uy" style="display:none;">
-                        <div class="payment-option selected" id="opt-transf-uy" onclick="selectPago('brou', 'uy')">
+                        <div class="payment-option selected" id="opt-brou" onclick="selectPago('brou', 'uy')">
                             <i class="fa fa-university" style="color:#d4af37;"></i> 
-                            <div>Transferencia BROU <br><small style="color:green;">10% OFF</small></div>
+                            <div>Transferencia BROU <br><small style="color:green;">10% OFF Aplicable</small></div>
                         </div>
                         <div class="payment-option" id="opt-mp-uy" onclick="selectPago('mercadopago_uy', 'uy')">
                             <i class="fa fa-credit-card" style="color:#009ee3;"></i> 
-                            <div>Mercado Pago UY <br><small style="color:#e74c3c;">+10%</small></div>
+                            <div>Mercado Pago UY <br><small style="color:#e74c3c;">+10% Recargo</small></div>
                         </div>
                     </div>
 
@@ -154,7 +154,14 @@
         function selectPago(metodo, pais) {
             metodoPagoElegido = metodo;
             document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
-            document.getElementById(`opt-${metodo === 'mercadopago_uy' ? 'mp-uy' : metodo === 'mercadopago_br' ? 'mp-br' : metodo}`).classList.add('selected');
+            
+            // Selector seguro a prueba de choques
+            let idBoton = 'opt-' + metodo;
+            if (metodo === 'mercadopago_uy') idBoton = 'opt-mp-uy';
+            if (metodo === 'mercadopago_br') idBoton = 'opt-mp-br';
+            
+            const boton = document.getElementById(idBoton);
+            if(boton) boton.classList.add('selected');
             
             const infoBanco = document.getElementById('info-banco');
             const wallet = document.getElementById('wallet_container');
@@ -183,7 +190,6 @@
             }
 
             try {
-                // PRÓXIMO PASO: El backend procesará esto según la moneda.
                 const res = await fetch('/api/nueva-orden', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ items: carritoParaEnviar, comprador: { nombre, telefono: tel, direccion: `${dir}, ${ciudad}` }, metodo_pago: metodoPagoElegido, moneda: monedaActual })
@@ -193,7 +199,6 @@
                 
                 if (data.type === 'mp') {
                     btn.style.display = 'none'; 
-                    // Si es BR, requerirá mpCheckoutBR (lo pondremos cuando tengas la clave)
                     mpCheckoutUY.bricks().create("wallet", "wallet_container", { initialization: { preferenceId: data.id } });
                 } else {
                     document.getElementById('checkout-form').style.display = 'none';
@@ -205,19 +210,17 @@
                     document.getElementById('btn-wa-comprobante').href = `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`;
                     vaciarCarrito();
                 }
-            } catch (error) { alert("Error"); btn.disabled = false; }
+            } catch (error) { alert("Error de conexión"); btn.disabled = false; btn.innerHTML = 'Completar Pedido <i class="fa fa-check"></i>'; }
         }
         
-        // Iniciar esperando la base de datos primero
+        // Esperamos a que baje la cotización y luego armamos la pantalla sin errores
         window.addEventListener('load', async () => {
             try {
-                // Pedimos la cotización en vivo
                 const res = await fetch('/api/configuracion');
                 const data = await res.json();
-                if(data.cotizacion) cotizacionBRL = data.cotizacion; // Actualizamos la global
+                if(data.cotizacion) cotizacionBRL = data.cotizacion; 
             } catch (e) { console.log('Error de red, usando default'); }
             
-            // Ahora sí, con la cotización correcta, dibujamos los precios
             configurarIdiomaYMoneda();
             renderizarResumen();
         });
