@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finalizar Compra - JART'S</title>
+    <title>Checkout - JART'S</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
@@ -11,15 +11,11 @@
         .checkout-container { max-width: 800px; margin: 40px auto; padding: 30px; background: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
         .checkout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         @media(max-width: 768px) { .checkout-grid { grid-template-columns: 1fr; } }
-        
         .resumen-orden { background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #eee; }
         .resumen-item { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 10px 0; font-size: 0.9rem; }
         .resumen-recargo { color: #e74c3c; font-weight: bold; background: #ffebeb; padding: 10px; border-radius: 5px; margin-top: 10px; display: none; justify-content: space-between;}
-        
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
         .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
-        
         .btn-confirmar { background: var(--accent); color: white; border: none; padding: 18px; width: 100%; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 20px; }
         .btn-confirmar:disabled { background: #ccc; cursor: not-allowed; }
         .pantalla-exito { display: none; text-align: center; padding: 50px 20px; }
@@ -29,149 +25,191 @@
 
     <header>
         <div class="logo" style="cursor:pointer;" onclick="window.location.href='/'">JART'S</div>
-        <a href="/" style="color:var(--text); text-decoration:none;"><i class="fa fa-arrow-left"></i> Volver a la Tienda</a>
+        <a href="/" style="color:var(--text); text-decoration:none;" id="t-volver"><i class="fa fa-arrow-left"></i> Volver a la Tienda</a>
     </header>
 
     <div class="container">
         <div class="checkout-container" id="checkout-form">
-            <h1 style="text-align:center; margin-bottom:30px;">Finalizar Pedido</h1>
+            <h1 style="text-align:center; margin-bottom:30px;" id="t-titulo">Finalizar Pedido</h1>
             <div class="checkout-grid">
                 <div>
-                    <h3>1. Datos Personales</h3>
-                    <div class="form-group"><input type="text" id="c-nombre" class="form-input" placeholder="Nombre y Apellido completo" required></div>
-                    <div class="form-group"><input type="tel" id="c-tel" class="form-input" placeholder="Teléfono / WhatsApp" required></div>
+                    <h3 id="t-paso1">1. Datos Personales</h3>
+                    <div class="form-group"><input type="text" id="c-nombre" class="form-input" placeholder="Nombre completo / Nome completo" required></div>
+                    <div class="form-group"><input type="tel" id="c-tel" class="form-input" placeholder="WhatsApp" required></div>
                     
-                    <h3 style="margin-top:30px;">2. Datos de Envío</h3>
-                    <div class="form-group">
-                        <select id="c-ciudad" class="form-input" required>
-                            <option value="">Selecciona tu Departamento...</option>
-                            <option value="Rivera">Rivera</option><option value="Montevideo">Montevideo</option><option value="Artigas">Artigas</option><option value="Salto">Salto</option><option value="Tacuarembó">Tacuarembó</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><input type="text" id="c-dir" class="form-input" placeholder="Calle, Número, Apto / Referencia" required></div>
+                    <h3 style="margin-top:30px;" id="t-paso2">2. Datos de Envío</h3>
+                    <div class="form-group"><input type="text" id="c-ciudad" class="form-input" placeholder="Ciudad / Cidade" required></div>
+                    <div class="form-group"><input type="text" id="c-dir" class="form-input" placeholder="Dirección / Endereço" required></div>
 
-                    <h3 style="margin-top:30px;">3. Forma de Pago</h3>
-                    <div class="payment-option selected" id="opt-transf" onclick="selectPago('transferencia')">
-                        <i class="fa fa-university" style="color:#d4af37;"></i> 
-                        <div>Transferencia BROU <br><small style="color:green; font-weight:normal;">¡10% OFF Aplicado!</small></div>
+                    <h3 style="margin-top:30px;" id="t-paso3">3. Forma de Pago</h3>
+                    <div id="opciones-pago-uy" style="display:none;">
+                        <div class="payment-option selected" id="opt-transf-uy" onclick="selectPago('brou', 'uy')">
+                            <i class="fa fa-university" style="color:#d4af37;"></i> 
+                            <div>Transferencia BROU <br><small style="color:green;">10% OFF</small></div>
+                        </div>
+                        <div class="payment-option" id="opt-mp-uy" onclick="selectPago('mercadopago_uy', 'uy')">
+                            <i class="fa fa-credit-card" style="color:#009ee3;"></i> 
+                            <div>Mercado Pago UY <br><small style="color:#e74c3c;">+10%</small></div>
+                        </div>
                     </div>
-                    <div class="payment-option" id="opt-mp" onclick="selectPago('mercadopago')">
-                        <i class="fa fa-credit-card" style="color:#009ee3;"></i> 
-                        <div>Mercado Pago <br><small style="color:#e74c3c; font-weight:normal;">(+10% Recargo)</small></div>
+
+                    <div id="opciones-pago-br" style="display:none;">
+                        <div class="payment-option selected" id="opt-pix" onclick="selectPago('pix', 'br')">
+                            <i class="fa fa-qrcode" style="color:#32bcad;"></i> 
+                            <div>PIX <br><small style="color:green;">10% OFF</small></div>
+                        </div>
+                        <div class="payment-option" id="opt-bb" onclick="selectPago('bb', 'br')">
+                            <i class="fa fa-university" style="color:#f9d923;"></i> 
+                            <div>Banco do Brasil <br><small style="color:green;">10% OFF</small></div>
+                        </div>
+                        <div class="payment-option" id="opt-mp-br" onclick="selectPago('mercadopago_br', 'br')">
+                            <i class="fa fa-credit-card" style="color:#009ee3;"></i> 
+                            <div>Cartão (Mercado Pago BR) <br><small style="color:#e74c3c;">+10%</small></div>
+                        </div>
                     </div>
                 </div>
 
                 <div>
                     <div class="resumen-orden">
-                        <h3 style="margin-top:0;">Resumen de Compra</h3>
+                        <h3 style="margin-top:0;" id="t-resumen">Resumen</h3>
                         <div id="checkout-items"></div>
-                        
-                        <div class="resumen-recargo" id="linea-recargo">
-                            <span>Recargo Tarjeta (10%):</span>
-                            <span>+$<span id="valor-recargo">0</span></span>
-                        </div>
-
+                        <div class="resumen-recargo" id="linea-recargo"><span>Recargo (10%):</span><span>+<span id="valor-recargo">0</span></span></div>
                         <div style="display:flex; justify-content:space-between; margin-top:20px; font-size:1.5rem; font-weight:bold; border-top:2px solid #ddd; padding-top:15px;">
-                            <span>Total:</span><span>$<span id="checkout-total">0</span></span>
+                            <span>Total:</span><span id="checkout-total">0</span>
                         </div>
                     </div>
 
                     <button id="btn-procesar" class="btn-confirmar" onclick="procesarPedido()">Completar Pedido <i class="fa fa-check"></i></button>
                     
                     <div id="wallet_container" style="margin-top:15px;"></div>
-                    <div id="info-transferencia" style="display:block; margin-top:20px; background:#fffbf0; border:1px solid #d4af37; padding:20px; border-radius:8px;">
-                        <h4 style="margin-top:0; color:#d4af37;">Datos Bancarios</h4>
-                        <p><strong>BROU Dólares:</strong> 110356121-0002</p>
-                        <p><strong>Titular:</strong> Leonardo Javier Da Costa González</p>
-                        <p style="font-size:0.85rem; color:#666;">Al confirmar, se registrará tu pedido para coordinar por WhatsApp.</p>
-                    </div>
+                    
+                    <div id="info-banco" style="display:none; margin-top:20px; background:#fffbf0; border:1px solid #d4af37; padding:20px; border-radius:8px;"></div>
                 </div>
             </div>
         </div>
 
         <div class="checkout-container pantalla-exito" id="pantalla-exito">
             <i class="fa fa-check-circle" style="font-size:80px; color:#25d366; margin-bottom:20px;"></i>
-            <h1 style="color:var(--text);">¡Pedido Recibido!</h1>
-            <p style="font-size:1.2rem; color:#666; margin-bottom:30px;">Orden: <strong id="numero-orden" style="color:var(--accent);"></strong></p>
-            <a id="btn-wa-comprobante" href="#" class="btn-add" style="display:inline-block; width:auto; padding:15px 30px; background:#25d366; text-decoration:none;"><i class="fab fa-whatsapp"></i> Hablar por WhatsApp</a>
+            <h1 style="color:var(--text);" id="t-exito">¡Pedido Recibido!</h1>
+            <p style="font-size:1.2rem; color:#666; margin-bottom:30px;"><span id="t-orden">Orden:</span> <strong id="numero-orden" style="color:var(--accent);"></strong></p>
+            <a id="btn-wa-comprobante" href="#" class="btn-add" style="display:inline-block; width:auto; padding:15px 30px; background:#25d366; text-decoration:none;"><i class="fab fa-whatsapp"></i> <span id="t-btn-wa">Enviar Comprobante</span></a>
         </div>
     </div>
 
     <script src="app.js"></script>
     <script>
-        const mpCheckout = new MercadoPago('APP_USR-c14fe09d-66b4-4faa-b684-eb43b153e329'); // Tu Public Key
-        let metodoPago = 'transferencia'; // Por defecto Transferencia para aprovechar el "descuento"
-        let subtotal = 0;
+        const mpCheckoutUY = new MercadoPago('APP_USR-c14fe09d-66b4-4faa-b684-eb43b153e329'); 
+        let metodoPagoElegido = monedaActual === 'UYU' ? 'brou' : 'pix'; 
+        let subtotalUYU = 0;
+
+        // Datos Bancarios
+        const bancos = {
+            brou: `<h4 style="margin-top:0; color:#d4af37;">Datos BROU</h4><p><strong>Caja Ahorro Pesos:</strong> 110356121-00001</p><p><strong>Titular:</strong> DA COSTA GONZALEZ LEONARDO JAVIER</p>`,
+            pix: `<h4 style="margin-top:0; color:#32bcad;">Chave PIX</h4><p><strong>PIX Celular:</strong> 55996679276</p><p><strong>Titular:</strong> Leonardo J. Costa Gonzalez</p>`,
+            bb: `<h4 style="margin-top:0; color:#f9d923;">Banco do Brasil</h4><p><strong>Agência:</strong> 0035-3</p><p><strong>Conta:</strong> 575410</p><p><strong>Titular:</strong> Leonardo J. Costa Gonzalez</p>`
+        };
+
+        function configurarIdiomaYMoneda() {
+            if (monedaActual === 'BRL') {
+                document.getElementById('opciones-pago-br').style.display = 'block';
+                document.getElementById('t-volver').innerHTML = '<i class="fa fa-arrow-left"></i> Voltar à Loja';
+                document.getElementById('t-titulo').innerText = 'Finalizar Pedido';
+                document.getElementById('t-paso1').innerText = '1. Dados Pessoais';
+                document.getElementById('t-paso2').innerText = '2. Dados de Envio';
+                document.getElementById('t-paso3').innerText = '3. Forma de Pagamento';
+                document.getElementById('t-resumen').innerText = 'Resumo da Compra';
+                document.getElementById('btn-procesar').innerHTML = 'Concluir Pedido <i class="fa fa-check"></i>';
+                document.getElementById('t-exito').innerText = 'Pedido Recebido!';
+                document.getElementById('t-orden').innerText = 'Pedido:';
+                document.getElementById('t-btn-wa').innerText = 'Enviar Comprovante';
+                selectPago('pix', 'br');
+            } else {
+                document.getElementById('opciones-pago-uy').style.display = 'block';
+                selectPago('brou', 'uy');
+            }
+        }
 
         function renderizarResumen() {
-            if (carrito.length === 0) { alert('Tu carrito está vacío.'); window.location.href = '/'; return; }
+            if (carrito.length === 0) { window.location.href = '/'; return; }
             const div = document.getElementById('checkout-items');
-            div.innerHTML = carrito.map(item => `
-                <div class="resumen-item"><span>${item.quantity}x ${item.title}</span><strong>$${item.unit_price * item.quantity}</strong></div>
-            `).join('');
+            div.innerHTML = carrito.map(item => `<div class="resumen-item"><span>${item.quantity}x ${item.title}</span><strong>${formatPrecio(item.unit_price * item.quantity)}</strong></div>`).join('');
             actualizarTotal();
         }
 
         function actualizarTotal() {
-            subtotal = carrito.reduce((a, b) => a + (b.unit_price * b.quantity), 0);
-            let recargo = 0;
+            subtotalUYU = carrito.reduce((a, b) => a + (b.unit_price * b.quantity), 0);
+            let recargoUYU = 0;
             
-            if (metodoPago === 'mercadopago') {
-                recargo = Math.round(subtotal * 0.10); // 10% de recargo
+            if (metodoPagoElegido.includes('mercadopago')) {
+                recargoUYU = Math.round(subtotalUYU * 0.10);
                 document.getElementById('linea-recargo').style.display = 'flex';
-                document.getElementById('valor-recargo').innerText = recargo;
+                document.getElementById('valor-recargo').innerText = formatPrecio(recargoUYU);
             } else {
                 document.getElementById('linea-recargo').style.display = 'none';
             }
 
-            document.getElementById('checkout-total').innerText = subtotal + recargo;
+            document.getElementById('checkout-total').innerText = formatPrecio(subtotalUYU + recargoUYU);
         }
 
-        function selectPago(metodo) {
-            metodoPago = metodo;
-            document.getElementById('opt-mp').classList.toggle('selected', metodo === 'mercadopago');
-            document.getElementById('opt-transf').classList.toggle('selected', metodo === 'transferencia');
-            document.getElementById('wallet_container').innerHTML = '';
-            document.getElementById('info-transferencia').style.display = metodo === 'transferencia' ? 'block' : 'none';
-            actualizarTotal(); // Recalcula el 10% al tocar el botón
+        function selectPago(metodo, pais) {
+            metodoPagoElegido = metodo;
+            document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`opt-${metodo === 'mercadopago_uy' ? 'mp-uy' : metodo === 'mercadopago_br' ? 'mp-br' : metodo}`).classList.add('selected');
+            
+            const infoBanco = document.getElementById('info-banco');
+            const wallet = document.getElementById('wallet_container');
+            wallet.innerHTML = '';
+            
+            if (metodo.includes('mercadopago')) {
+                infoBanco.style.display = 'none';
+            } else {
+                infoBanco.style.display = 'block';
+                infoBanco.innerHTML = bancos[metodo] + `<p style="font-size:0.85rem; color:#666; margin-top:10px;">${monedaActual==='BRL'?'Ao confirmar, envie o comprovante no WhatsApp.':'Al confirmar, envía el comprobante por WhatsApp.'}</p>`;
+            }
+            actualizarTotal(); 
         }
 
         async function procesarPedido() {
             const nombre = document.getElementById('c-nombre').value.trim(), tel = document.getElementById('c-tel').value.trim();
-            const ciudad = document.getElementById('c-ciudad').value, dir = document.getElementById('c-dir').value.trim();
-            if (!nombre || !tel || !ciudad || !dir) return alert('Por favor, completa todos los campos.');
+            const ciudad = document.getElementById('c-ciudad').value.trim(), dir = document.getElementById('c-dir').value.trim();
+            if (!nombre || !tel || !ciudad || !dir) return alert(monedaActual === 'BRL' ? 'Preencha todos os campos.' : 'Completa todos los campos.');
 
             const btn = document.getElementById('btn-procesar');
-            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>...';
 
-            // Truco: Si es Mercado Pago, agregamos el recargo como un "ítem" invisible al backend
             let carritoParaEnviar = [...carrito]; 
-            if (metodoPago === 'mercadopago') {
-                const recargo = Math.round(subtotal * 0.10);
-                carritoParaEnviar.push({ id: 9999, title: 'Recargo Tarjeta (10%)', unit_price: recargo, quantity: 1 });
+            if (metodoPagoElegido.includes('mercadopago')) {
+                carritoParaEnviar.push({ id: 9999, title: 'Recargo (10%)', unit_price: Math.round(subtotalUYU * 0.10), quantity: 1 });
             }
 
             try {
+                // PRÓXIMO PASO: El backend procesará esto según la moneda.
                 const res = await fetch('/api/nueva-orden', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: carritoParaEnviar, comprador: { nombre, telefono: tel, direccion: `${dir}, ${ciudad}` }, metodo_pago: metodoPago })
+                    body: JSON.stringify({ items: carritoParaEnviar, comprador: { nombre, telefono: tel, direccion: `${dir}, ${ciudad}` }, metodo_pago: metodoPagoElegido, moneda: monedaActual })
                 });
 
                 const data = await res.json();
-                if (data.error) throw new Error(data.error);
-
+                
                 if (data.type === 'mp') {
                     btn.style.display = 'none'; 
-                    mpCheckout.bricks().create("wallet", "wallet_container", { initialization: { preferenceId: data.id } });
+                    // Si es BR, requerirá mpCheckoutBR (lo pondremos cuando tengas la clave)
+                    mpCheckoutUY.bricks().create("wallet", "wallet_container", { initialization: { preferenceId: data.id } });
                 } else {
                     document.getElementById('checkout-form').style.display = 'none';
                     document.getElementById('pantalla-exito').style.display = 'block';
                     document.getElementById('numero-orden').innerText = `#${data.id}`;
-                    document.getElementById('btn-wa-comprobante').href = `https://wa.me/59899822758?text=${encodeURIComponent(`Hola JART'S! Pedido #${data.id}. Te envío el comprobante.`)}`;
+                    
+                    const waNum = monedaActual === 'BRL' ? WA_BR : WA_UY;
+                    const msg = monedaActual === 'BRL' ? `Olá Jart's! Pedido #${data.id}. Segue o comprovante PIX/BB.` : `Hola Jart's! Pedido #${data.id}. Te envío el comprobante BROU.`;
+                    document.getElementById('btn-wa-comprobante').href = `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`;
                     vaciarCarrito();
                 }
-            } catch (error) { alert(error.message); btn.disabled = false; btn.innerHTML = 'Completar Pedido <i class="fa fa-check"></i>'; }
+            } catch (error) { alert("Error"); btn.disabled = false; }
         }
+        
+        // Iniciar
+        configurarIdiomaYMoneda();
         renderizarResumen();
     </script>
 </body>

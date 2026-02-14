@@ -16,20 +16,19 @@
 
     <main>
         <div style="background:#f8f8f8; padding:60px 20px; text-align:center; border-bottom:1px solid #eee; margin-bottom: 30px;">
-            <h1 style="font-weight:300; letter-spacing:5px; margin:0;">ESENCIA ÚNICA</h1>
-            <p style="color:#777; margin-top:10px;">Descubre nuestra colección</p>
+            <h1 style="font-weight:300; letter-spacing:5px; margin:0;" data-es="ESENCIA ÚNICA" data-pt="ESSÊNCIA ÚNICA">ESENCIA ÚNICA</h1>
+            <p style="color:#777; margin-top:10px;" data-es="Descubre nuestra colección" data-pt="Descubra nossa coleção">Descubre nuestra colección</p>
         </div>
         
         <div class="container">
             <div class="filter-container" id="filtros-categoria"></div>
-            
-            <div id="catalogo"><p style="text-align:center; padding:50px;">Cargando...</p></div>
+            <div id="catalogo"><p style="text-align:center; padding:50px;" data-es="Cargando..." data-pt="Carregando...">Cargando...</p></div>
         </div>
 
         <section class="faq-container">
-            <h2 style="text-align:center; margin-bottom:30px;">INFORMACIÓN</h2>
-            <div class="faq-item" onclick="this.classList.toggle('active')"><strong>Políticas de Envío <i class="fa fa-chevron-down"></i></strong><div class="faq-answer">Envíos a todo el país. Procesamos en 24hs hábiles.</div></div>
-            <div class="faq-item" onclick="this.classList.toggle('active')"><strong>Precios Contado y Crédito <i class="fa fa-chevron-down"></i></strong><div class="faq-answer">Los precios publicados tienen un 10% OFF aplicable por pago al Contado (Transferencia BROU). Pagos con Mercado Pago tienen recargo del 10%.</div></div>
+            <h2 style="text-align:center; margin-bottom:30px;" data-es="INFORMACIÓN" data-pt="INFORMAÇÕES">INFORMACIÓN</h2>
+            <div class="faq-item" onclick="this.classList.toggle('active')"><strong data-es="Políticas de Envío" data-pt="Políticas de Envio">Políticas de Envío</strong> <i class="fa fa-chevron-down"></i><div class="faq-answer" data-es="Envíos a todo el país. Procesamos en 24hs hábiles." data-pt="Envios para todo o país. Processamos em 24h úteis.">Envíos a todo el país. Procesamos en 24hs hábiles.</div></div>
+            <div class="faq-item" onclick="this.classList.toggle('active')"><strong data-es="Precios Contado y Crédito" data-pt="Preços à Vista e Prazo">Precios Contado y Crédito</strong> <i class="fa fa-chevron-down"></i><div class="faq-answer" data-es="Los precios tienen 10% OFF al Contado. Tarjetas tienen recargo del 10%." data-pt="Os preços têm 10% de desconto à vista. Cartões têm acréscimo de 10%.">Los precios tienen 10% OFF al Contado. Tarjetas tienen recargo del 10%.</div></div>
         </section>
     </main>
 
@@ -39,25 +38,25 @@
             <h2 id="resena-titulo" style="border-bottom: 1px solid #eee; padding-bottom: 10px;">Reseñas</h2>
             <div id="lista-resenas" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px;"></div>
             <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-            <h3 style="font-size:1.1rem; margin-bottom:10px;">Dejar reseña</h3>
+            <h3 style="font-size:1.1rem; margin-bottom:10px;" data-es="Dejar reseña" data-pt="Deixar avaliação">Dejar reseña</h3>
             <input type="hidden" id="r-perfume-id">
-            <input type="text" id="r-nombre" class="form-input" placeholder="Tu Nombre">
+            <input type="text" id="r-nombre" class="form-input" placeholder="Nombre / Nome">
             <select id="r-estrellas" class="form-input">
-                <option value="5">⭐⭐⭐⭐⭐ Excelente</option><option value="4">⭐⭐⭐⭐ Muy Bueno</option><option value="3">⭐⭐⭐ Bueno</option><option value="2">⭐⭐ Regular</option><option value="1">⭐ Malo</option>
+                <option value="5">⭐⭐⭐⭐⭐ 5/5</option><option value="4">⭐⭐⭐⭐ 4/5</option><option value="3">⭐⭐⭐ 3/5</option><option value="2">⭐⭐ 2/5</option><option value="1">⭐ 1/5</option>
             </select>
-            <textarea id="r-comentario" class="form-input" placeholder="¿Qué te pareció?" rows="3"></textarea>
-            <button class="btn-add" onclick="enviarResena()" style="background:#25d366;">Publicar</button>
+            <textarea id="r-comentario" class="form-input" placeholder="Comentario / Comentário" rows="3"></textarea>
+            <button class="btn-add" onclick="enviarResena()" style="background:#25d366;" data-es="Publicar" data-pt="Publicar">Publicar</button>
         </div>
     </div>
 
     <div id="cart-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="toggleCart()">&times;</span>
-            <h2 style="margin-top:0;">Tu Carrito</h2>
+            <h2 style="margin-top:0;" data-es="Tu Carrito" data-pt="Seu Carrinho">Tu Carrito</h2>
             <div id="cart-items" style="margin-bottom:20px; max-height: 50vh; overflow-y: auto;"></div>
-            <h3 style="text-align:right; border-top:2px solid #eee; padding-top:15px; font-size:1.5rem;">Total: $<span id="cart-total">0</span></h3>
-            <button id="btn-ir-pagar" class="btn-add" onclick="irAlCheckout()" style="margin-top:20px; font-size:1.2rem; padding:18px; background:var(--accent);">Iniciar Compra Segura <i class="fa fa-lock"></i></button>
-            <button class="btn-add" onclick="toggleCart()" style="background:#eee; color:#333;">Seguir Comprando</button>
+            <h3 style="text-align:right; border-top:2px solid #eee; padding-top:15px; font-size:1.5rem;"><span data-es="Total:" data-pt="Total:">Total:</span> <span id="cart-total">0</span></h3>
+            <button id="btn-ir-pagar" class="btn-add" onclick="irAlCheckout()" style="margin-top:20px; font-size:1.2rem; padding:18px; background:var(--accent);"><span data-es="Iniciar Compra Segura" data-pt="Finalizar Compra">Iniciar Compra Segura</span> <i class="fa fa-lock"></i></button>
+            <button class="btn-add" onclick="toggleCart()" style="background:#eee; color:#333;" data-es="Seguir Comprando" data-pt="Continuar Comprando">Seguir Comprando</button>
         </div>
     </div>
 
