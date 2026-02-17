@@ -4,56 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - JART'S SHOP</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .admin-box { max-width: 1000px; margin: 40px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-        .nav-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px; }
-        .nav-tabs button { padding: 12px 20px; border: none; background: #f3f4f6; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; color: #4b5563;}
-        .nav-tabs button:hover { background: #e5e7eb; }
-        .nav-tabs button.active { background: var(--accent); color: white; }
-        .tab-content { display: none; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; }
+        .admin-box { max-width: 1000px; margin: 40px auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 1px solid var(--border); }
+        .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; }
+        .nav-tabs button { padding: 12px 20px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; color: var(--text-muted);}
+        .nav-tabs button:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .nav-tabs button.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .tab-content { display: none; padding: 25px; border: 1px solid var(--border); border-radius: 12px; background: rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.95rem; }
-        th { background: #f9fafb; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; font-size: 0.85rem;}
-        input, textarea, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif;}
-        .btn-accion { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-family: 'Inter', sans-serif;}
+        th, td { padding: 15px; border-bottom: 1px solid var(--border); text-align: left; font-size: 0.95rem; }
+        th { background: rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-size: 0.85rem;}
+        .btn-accion { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-family: 'Inter', sans-serif; transition: 0.3s;}
+        .btn-accion:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .btn-editar { background: #10b981; }
         .btn-borrar { background: #ef4444; }
     </style>
 </head>
 <body>
 
-    <div id="login-view" style="max-width:350px; margin:100px auto; text-align:center; background:white; padding:40px; border-radius:16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-        <h2>Panel JART'S SHOP</h2>
-        <input type="text" id="user" placeholder="Usuario">
-        <input type="password" id="pass" placeholder="Contraseña">
+    <div id="login-view" style="max-width:350px; margin:100px auto; text-align:center; background:var(--card-bg); padding:40px; border-radius:16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 1px solid var(--border);">
+        <h2 style="color:var(--text);">Panel JART'S SHOP</h2>
+        <input type="text" id="user" class="form-input" placeholder="Usuario">
+        <input type="password" id="pass" class="form-input" placeholder="Contraseña">
         <button class="btn-add" onclick="login()" style="margin-top:20px;">Ingresar</button>
     </div>
 
     <div id="dashboard-view" class="admin-box" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; border-bottom:2px solid #e5e7eb; padding-bottom:15px;">
-            <h1 style="margin:0; font-size: 1.8rem;">JART'S <span style="color:var(--accent);">SHOP</span> Admin</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; border-bottom:2px solid var(--border); padding-bottom:15px;">
+            <h1 style="margin:0; font-size: 1.8rem; color:var(--text);">JART'S <span style="color:var(--accent);">SHOP</span> Admin</h1>
             <button onclick="logout()" class="btn-accion btn-borrar" style="padding:10px 20px;">Cerrar Sesión</button>
         </div>
 
-        <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:20px; border-radius:12px; margin-bottom:25px;">
-            <h3 style="margin-top:0; color:#334155; margin-bottom: 15px;"><i class="fa fa-cog"></i> Configuración de la Tienda</h3>
+        <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border); padding:20px; border-radius:12px; margin-bottom:25px;">
+            <h3 style="margin-top:0; color:var(--text); margin-bottom: 15px;"><i class="fa fa-cog" style="color:var(--text-muted);"></i> Configuración de la Tienda</h3>
             
             <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
                 <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
                     <strong style="color:var(--accent); width: 150px;">Cotización (BRL):</strong>
-                    <span style="font-weight:bold;">R$ 1 = </span>
-                    <input type="number" id="adm-cotizacion" step="0.10" style="width:100px; margin:0; font-weight:bold; text-align:center;" placeholder="8.50">
-                    <span style="font-weight:bold;">UYU</span>
+                    <span style="font-weight:bold; color:var(--text);">R$ 1 = </span>
+                    <input type="number" id="adm-cotizacion" class="form-input" step="0.10" style="width:120px; margin:0; font-weight:bold; text-align:center;" placeholder="8.50">
+                    <span style="font-weight:bold; color:var(--text);">UYU</span>
                 </div>
                 
                 <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
                     <strong style="color:var(--accent); width: 150px;">Banner Principal:</strong>
-                    <input type="url" id="adm-banner" style="flex:1; margin:0;" placeholder="Pega el link directo de Postimages para el Banner de Inicio">
+                    <input type="url" id="adm-banner" class="form-input" style="flex:1; margin:0;" placeholder="Link directo de Postimages (.jpg o .png)">
                 </div>
             </div>
-            <button class="btn-add" onclick="guardarConfiguracion()" style="width:auto; padding:10px 25px; margin-top:15px; background: #334155;">Guardar Configuración</button>
+            <button class="btn-add" onclick="guardarConfiguracion()" style="width:auto; padding:12px 25px; margin-top:15px; background: var(--accent);">Guardar Configuración</button>
         </div>
 
         <div class="nav-tabs">
@@ -64,20 +64,20 @@
         </div>
 
         <div id="tab-nuevo" class="tab-content" style="display:block;">
-            <h3 style="margin-top:0;">Nuevo Producto</h3>
-            <p style="color:#6b7280; font-size:0.9rem;">⚠️ Ingresa el precio en <strong>Pesos Uruguayos</strong>.</p>
+            <h3 style="margin-top:0; color:var(--text);">Nuevo Producto</h3>
+            <p style="color:var(--text-muted); font-size:0.9rem;">⚠️ Ingresa el precio en <strong>Pesos Uruguayos</strong>.</p>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                <input type="text" id="n-nombre" placeholder="Nombre del Producto">
-                <input type="number" id="n-precio" placeholder="Precio en PESOS (Ej: 1500)">
-                <input type="text" id="n-cat" placeholder="Categoría (Ej: Perfumes, Tecnología, Ropa)">
-                <input type="url" id="n-img" placeholder="Link Directo Imagen (Postimages)">
+                <input type="text" id="n-nombre" class="form-input" placeholder="Nombre del Producto">
+                <input type="number" id="n-precio" class="form-input" placeholder="Precio en PESOS (Ej: 1500)">
+                <input type="text" id="n-cat" class="form-input" placeholder="Categoría (Ej: Perfumes, Tecnología, Ropa)">
+                <input type="url" id="n-img" class="form-input" placeholder="Link Directo Imagen (Postimages)">
             </div>
-            <textarea id="n-desc" placeholder="Descripción del producto..." rows="4" style="margin-top:15px;"></textarea>
+            <textarea id="n-desc" class="form-input" placeholder="Descripción del producto..." rows="4" style="margin-top:15px;"></textarea>
             <button class="btn-add" onclick="crearProducto()" style="width:auto; padding:12px 30px; margin-top:15px;">Publicar Producto</button>
         </div>
 
         <div id="tab-inventario" class="tab-content">
-            <h3 style="margin-top:0;">Gestión de Productos</h3>
+            <h3 style="margin-top:0; color:var(--text);">Gestión de Productos</h3>
             <table id="tabla-inv">
                 <thead><tr><th>Img</th><th>Detalle</th><th>Acción</th></tr></thead>
                 <tbody></tbody>
@@ -85,7 +85,7 @@
         </div>
 
         <div id="tab-pedidos" class="tab-content">
-            <h3 style="margin-top:0;">Listado de Órdenes</h3>
+            <h3 style="margin-top:0; color:var(--text);">Listado de Órdenes</h3>
             <table id="tabla-pedidos">
                 <thead><tr><th>ID</th><th>Cliente / Envío</th><th>Monto / Pago</th><th>Estado</th></tr></thead>
                 <tbody></tbody>
@@ -93,7 +93,7 @@
         </div>
 
         <div id="tab-resenas" class="tab-content">
-            <h3 style="margin-top:0;">Moderación de Comentarios</h3>
+            <h3 style="margin-top:0; color:var(--text);">Moderación de Comentarios</h3>
             <table id="tabla-resenas">
                 <thead><tr><th>Producto</th><th>Usuario</th><th>Comentario</th><th>⭐</th><th>Acción</th></tr></thead>
                 <tbody></tbody>
@@ -104,17 +104,17 @@
     <div id="modal-edit" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="document.getElementById('modal-edit').style.display='none'">&times;</span>
-            <h3 style="margin-top:0;">Editar Producto</h3>
+            <h3 style="margin-top:0; color:var(--text);">Editar Producto</h3>
             <input type="hidden" id="e-id">
-            <input type="text" id="e-nombre" placeholder="Nombre">
-            <input type="number" id="e-precio" placeholder="Precio en Pesos">
-            <input type="text" id="e-cat" placeholder="Categoría">
-            <input type="url" id="e-img" placeholder="URL Imagen">
-            <textarea id="e-desc" rows="4" placeholder="Descripción"></textarea>
+            <input type="text" id="e-nombre" class="form-input" placeholder="Nombre">
+            <input type="number" id="e-precio" class="form-input" placeholder="Precio en Pesos">
+            <input type="text" id="e-cat" class="form-input" placeholder="Categoría">
+            <input type="url" id="e-img" class="form-input" placeholder="URL Imagen">
+            <textarea id="e-desc" class="form-input" rows="4" placeholder="Descripción"></textarea>
             <button class="btn-add" onclick="guardarEdicion()" style="margin-top:15px;">Guardar Cambios</button>
         </div>
     </div>
 
-    <script src="admin.js?v=2.0"></script>
+    <script src="admin.js?v=3.0"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 async function check() {
-    const r = await fetch('/api/check-auth');
+    const r = await fetch('/api/check-auth?t=' + new Date().getTime(), { cache: 'no-store' });
     const d = await r.json();
     if (d.authenticated) {
         document.getElementById('login-view').style.display = 'none';
@@ -38,14 +38,14 @@ async function crearProducto() {
 }
 
 async function cargarInventario() {
-    const res = await fetch('/api/perfumes');
+    const res = await fetch('/api/perfumes?t=' + new Date().getTime());
     const prods = await res.json();
     const tbody = document.querySelector('#tabla-inv tbody');
-    if (prods.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Inventario vacío.</td></tr>'; return; }
+    if (prods.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Inventario vacío.</td></tr>'; return; }
     tbody.innerHTML = prods.map(p => `
         <tr>
-            <td style="width:70px;"><img src="${p.imagen_url}" style="width:60px; height:60px; object-fit:contain; border-radius:8px; background:#f9fafb; border:1px solid #e5e7eb;"></td>
-            <td><strong style="font-size:1.05rem; color:#1f2937;">${p.nombre}</strong><br><span style="color:#6b7280; font-size:0.9rem;">$${p.precio} UYU | ${p.categoria}</span></td>
+            <td style="width:70px;"><img src="${p.imagen_url}" style="width:60px; height:60px; object-fit:contain; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border);"></td>
+            <td><strong style="font-size:1.05rem; color:var(--text);">${p.nombre}</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">$${p.precio} UYU | ${p.categoria}</span></td>
             <td style="width:160px;"><button class="btn-accion btn-editar" onclick='editar(${JSON.stringify(p).replace(/'/g, "&apos;")})'>Editar</button> <button class="btn-accion btn-borrar" onclick='borrar(${p.id})'>Borrar</button></td>
         </tr>
     `).join('');
@@ -66,17 +66,17 @@ async function guardarEdicion() {
 }
 
 async function cargarPedidos() {
-    const res = await fetch('/api/admin/ordenes');
+    const res = await fetch('/api/admin/ordenes?t=' + new Date().getTime());
     const ords = await res.json();
     const tbody = document.querySelector('#tabla-pedidos tbody');
-    if (ords.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay órdenes registradas.</td></tr>'; return; }
+    if (ords.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No hay órdenes registradas.</td></tr>'; return; }
     tbody.innerHTML = ords.map(o => `
         <tr>
             <td style="font-weight:bold; color:var(--accent);">#${o.id}</td>
-            <td><strong>${o.cliente_nombre}</strong><br><span style="color:#4b5563; font-size:0.9rem;">📞 ${o.cliente_telefono}<br>📍 ${o.cliente_direccion || 'N/A'}</span></td>
-            <td><strong style="font-size:1.1rem; color:#1f2937;">${o.total}</strong><br><small style="background:#e5e7eb; padding:3px 6px; border-radius:4px; color:#374151;">${o.metodo_pago ? o.metodo_pago.toUpperCase() : 'N/A'}</small></td>
+            <td><strong style="color:var(--text);">${o.cliente_nombre}</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">📞 ${o.cliente_telefono}<br>📍 ${o.cliente_direccion || 'N/A'}</span></td>
+            <td><strong style="font-size:1.1rem; color:var(--text);">${o.total}</strong><br><small style="background:rgba(255,255,255,0.1); padding:3px 6px; border-radius:4px; color:var(--text);">${o.metodo_pago ? o.metodo_pago.toUpperCase() : 'N/A'}</small></td>
             <td>
-                <select onchange="cambiarEstado(${o.id}, this.value)" style="padding:6px; font-weight:bold; cursor:pointer; border-radius:6px; border:1px solid #d1d5db;">
+                <select class="form-input" onchange="cambiarEstado(${o.id}, this.value)" style="padding:6px; font-weight:bold; cursor:pointer; width:auto; margin:0;">
                     <option value="Pendiente" ${o.estado === 'Pendiente' ? 'selected' : ''}>Pendiente ⏱️</option>
                     <option value="Pagado" ${o.estado === 'Pagado' ? 'selected' : ''}>Pagado 💰</option>
                     <option value="Enviado" ${o.estado === 'Enviado' ? 'selected' : ''}>Enviado 📦</option>
@@ -88,20 +88,19 @@ async function cargarPedidos() {
 async function cambiarEstado(id, estado) { await fetch('/api/admin/orden-estado', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, estado }) }); }
 
 async function cargarResenasAdmin() {
-    const res = await fetch('/api/admin/resenas');
+    const res = await fetch('/api/admin/resenas?t=' + new Date().getTime());
     const resenas = await res.json();
     const tbody = document.querySelector('#tabla-resenas tbody');
-    if (resenas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay reseñas.</td></tr>'; return; }
+    if (resenas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No hay reseñas.</td></tr>'; return; }
     tbody.innerHTML = resenas.map(r => `
-        <tr><td style="color:var(--accent); font-weight:bold;">${r.perfume_nombre}</td><td><strong>${r.nombre}</strong></td><td style="max-width:250px; font-style:italic; color:#4b5563; font-size:0.9rem;">"${r.comentario}"</td><td style="font-size:1.1rem; color:#d4af37;">${'⭐'.repeat(r.estrellas)}</td><td><button onclick="borrarResena(${r.id})" class="btn-accion btn-borrar">Borrar</button></td></tr>
+        <tr><td style="color:var(--accent); font-weight:bold;">${r.perfume_nombre}</td><td><strong style="color:var(--text);">${r.nombre}</strong></td><td style="max-width:250px; font-style:italic; color:var(--text-muted); font-size:0.9rem;">"${r.comentario}"</td><td style="font-size:1.1rem; color:var(--gold);">${'⭐'.repeat(r.estrellas)}</td><td><button onclick="borrarResena(${r.id})" class="btn-accion btn-borrar">Borrar</button></td></tr>
     `).join('');
 }
 async function borrarResena(id) { if (confirm('¿Borrar comentario permanente?')) { await fetch(`/api/admin/resenas/${id}`, { method: 'DELETE' }); cargarResenasAdmin(); } }
 
-// --- CONFIGURACIÓN (Cotización y Banner) ---
 async function cargarConfiguracionAdmin() {
     try {
-        const res = await fetch('/api/configuracion');
+        const res = await fetch('/api/configuracion?t=' + new Date().getTime(), { cache: 'no-store' });
         const data = await res.json();
         document.getElementById('adm-cotizacion').value = data.cotizacion;
         document.getElementById('adm-banner').value = data.banner_url || '';
