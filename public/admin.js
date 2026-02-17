@@ -1,4 +1,3 @@
-// --- SISTEMA DE VIGILANCIA DE SESIÓN ---
 async function check(isBackground = false) {
     try {
         const r = await fetch('/api/check-auth?t=' + new Date().getTime(), { cache: 'no-store' });
@@ -9,13 +8,11 @@ async function check(isBackground = false) {
             document.getElementById('dashboard-view').style.display = 'block';
             if (!isBackground) cargarConfiguracionAdmin();
         } else if (isBackground && document.getElementById('dashboard-view').style.display === 'block') {
-            // Si estaba en el panel y la sesión murió, lo echamos
             forzarDeslogueo();
         }
     } catch (e) { console.error("Error comprobando sesión", e); }
 }
 
-// Verifica la sesión cada 60 segundos en silencio
 setInterval(() => check(true), 60000); 
 
 function forzarDeslogueo() {
@@ -23,7 +20,6 @@ function forzarDeslogueo() {
     const loginView = document.getElementById('login-view');
     loginView.style.display = 'block';
     
-    // Inyectamos un cartel rojo elegante si no existe
     if (!document.getElementById('msg-expirado')) {
         const msg = document.createElement('div');
         msg.id = 'msg-expirado';
@@ -33,7 +29,6 @@ function forzarDeslogueo() {
     }
 }
 
-// Interceptor: Envuelve todas las llamadas sensibles del admin
 async function adminFetch(url, options = {}) {
     const res = await fetch(url, options);
     if (res.status === 401) {
@@ -50,7 +45,7 @@ async function login() {
     const data = await res.json();
     if (data.success) {
         const msg = document.getElementById('msg-expirado');
-        if (msg) msg.remove(); // Limpiamos el cartel rojo si ingresa bien
+        if (msg) msg.remove(); 
         location.reload(); 
     } else {
         alert('Error: Usuario o contraseña incorrectos');
@@ -73,31 +68,33 @@ async function crearProducto() {
         nombre: document.getElementById('n-nombre').value, 
         precio: document.getElementById('n-precio').value, 
         categoria: document.getElementById('n-cat').value, 
+        subcategoria: document.getElementById('n-subcat').value,
         imagen_url: document.getElementById('n-img').value, 
         descripcion: document.getElementById('n-desc').value,
         activo: document.getElementById('n-stock').value === "true"
     };
-    if (!data.nombre || !data.precio || !data.imagen_url) return alert('Datos obligatorios faltantes.');
+    if (!data.nombre || !data.precio || !data.categoria || !data.imagen_url) return alert('Datos obligatorios faltantes.');
     
     await adminFetch('/api/admin/productos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     alert('¡Producto guardado!');
-    ['n-nombre', 'n-precio', 'n-img', 'n-desc', 'n-cat'].forEach(id => document.getElementById(id).value = '');
+    ['n-nombre', 'n-precio', 'n-img', 'n-desc', 'n-cat', 'n-subcat'].forEach(id => document.getElementById(id).value = '');
 }
 
 async function cargarInventario() {
-    // Es pública, no necesita adminFetch
     const res = await fetch('/api/perfumes?t=' + new Date().getTime());
     const prods = await res.json();
     const tbody = document.querySelector('#tabla-inv tbody');
     if (prods.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Inventario vacío.</td></tr>'; return; }
-    tbody.innerHTML = prods.map(p => `
+    tbody.innerHTML = prods.map(p => {
+        const rutaCat = p.subcategoria ? `${p.categoria} <span style="color:var(--accent);">> ${p.subcategoria}</span>` : p.categoria;
+        return `
         <tr>
             <td style="width:70px;"><img src="${p.imagen_url}" style="width:60px; height:60px; object-fit:contain; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border);"></td>
-            <td><strong style="font-size:1.05rem; color:var(--text);">${p.nombre}</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">$${p.precio} UYU | ${p.categoria}</span></td>
+            <td><strong style="font-size:1.05rem; color:var(--text);">${p.nombre}</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">$${p.precio} UYU | ${rutaCat}</span></td>
             <td>${p.activo ? '<span style="color:#10b981; font-weight:bold;">✅ Stock</span>' : '<span style="color:#ef4444; font-weight:bold;">❌ Agotado</span>'}</td>
             <td style="width:160px;"><button class="btn-accion btn-editar" onclick='editar(${JSON.stringify(p).replace(/'/g, "&apos;")})'>Editar</button> <button class="btn-accion btn-borrar" onclick='borrar(${p.id})'>Borrar</button></td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 async function borrar(id) { 
@@ -108,7 +105,13 @@ async function borrar(id) {
 }
 
 function editar(p) {
-    document.getElementById('e-id').value = p.id; document.getElementById('e-nombre').value = p.nombre; document.getElementById('e-precio').value = p.precio; document.getElementById('e-cat').value = p.categoria; document.getElementById('e-img').value = p.imagen_url; document.getElementById('e-desc').value = p.descripcion;
+    document.getElementById('e-id').value = p.id; 
+    document.getElementById('e-nombre').value = p.nombre; 
+    document.getElementById('e-precio').value = p.precio; 
+    document.getElementById('e-cat').value = p.categoria; 
+    document.getElementById('e-subcat').value = p.subcategoria || ''; 
+    document.getElementById('e-img').value = p.imagen_url; 
+    document.getElementById('e-desc').value = p.descripcion;
     document.getElementById('e-stock').value = p.activo ? "true" : "false"; 
     document.getElementById('modal-edit').style.display = 'block';
 }
@@ -119,6 +122,7 @@ async function guardarEdicion() {
         nombre: document.getElementById('e-nombre').value, 
         precio: document.getElementById('e-precio').value, 
         categoria: document.getElementById('e-cat').value, 
+        subcategoria: document.getElementById('e-subcat').value,
         imagen_url: document.getElementById('e-img').value, 
         descripcion: document.getElementById('e-desc').value,
         activo: document.getElementById('e-stock').value === "true"
@@ -178,7 +182,6 @@ async function borrarResena(id) {
 
 async function cargarConfiguracionAdmin() {
     try {
-        // Es pública, no requiere auth
         const res = await fetch('/api/configuracion?t=' + new Date().getTime(), { cache: 'no-store' });
         const data = await res.json();
         document.getElementById('adm-cotizacion').value = data.cotizacion;

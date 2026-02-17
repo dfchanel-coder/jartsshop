@@ -4,14 +4,13 @@ const cors = require('cors');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
-const xss = require('xss'); // NUEVO: Herramienta de seguridad anti-hackeo
+const xss = require('xss');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static('public'));
 
-// SEGURIDAD: La clave de sesión ahora está protegida en Render
 const SESSION_SECRET = process.env.SESSION_SECRET || 'clave_temporal_desarrollo_2026';
 app.use(session({ secret: SESSION_SECRET, resave: false, saveUninitialized: true, cookie: { secure: false } }));
 
@@ -21,7 +20,7 @@ async function iniciarDB() {
     try {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS usuarios_admin (id SERIAL PRIMARY KEY, usuario VARCHAR(50) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL);
-            CREATE TABLE IF NOT EXISTS perfumes (id SERIAL PRIMARY KEY, nombre VARCHAR(255) NOT NULL, precio DECIMAL(10, 2) NOT NULL, categoria VARCHAR(100) NOT NULL, imagen_url TEXT NOT NULL, descripcion TEXT, activo BOOLEAN DEFAULT true);
+            CREATE TABLE IF NOT EXISTS perfumes (id SERIAL PRIMARY KEY, nombre VARCHAR(255) NOT NULL, precio DECIMAL(10, 2) NOT NULL, categoria VARCHAR(100) NOT NULL, subcategoria VARCHAR(100), imagen_url TEXT NOT NULL, descripcion TEXT, activo BOOLEAN DEFAULT true);
             CREATE TABLE IF NOT EXISTS ordenes (id SERIAL PRIMARY KEY, cliente_nombre VARCHAR(100), cliente_telefono VARCHAR(50), cliente_direccion TEXT, metodo_pago VARCHAR(50), items_json TEXT, total DECIMAL(10, 2), estado VARCHAR(50) DEFAULT 'Pendiente', fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE IF NOT EXISTS resenas (id SERIAL PRIMARY KEY, perfume_id INT NOT NULL, nombre VARCHAR(100) NOT NULL, estrellas INT NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5), comentario TEXT, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT);
@@ -52,13 +51,10 @@ app.get('/api/perfumes/:id/resenas', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM resenas WHERE perfume_id = $1 ORDER BY fecha DESC', [req.params.id]); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
 });
 
-// NUEVO: Sanitización de Reseñas
 app.post('/api/perfumes/:id/resenas', async (req, res) => {
     try { 
-        // Limpiamos los textos antes de mandarlos a la base de datos
         const nombreLimpio = xss(req.body.nombre);
         const comentarioLimpio = xss(req.body.comentario);
-        
         await pool.query('INSERT INTO resenas (perfume_id, nombre, estrellas, comentario) VALUES ($1, $2, $3, $4)', [req.params.id, nombreLimpio, req.body.estrellas, comentarioLimpio]); 
         res.json({ success: true }); 
     } catch (err) { res.status(500).send(err.message); }
@@ -86,11 +82,11 @@ app.post('/api/logout', (req, res) => { req.session.destroy(); res.json({ succes
 
 app.post('/api/admin/productos', requireAuth, async (req, res) => { 
     const activo = req.body.activo !== false; 
-    try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion, activo) VALUES ($1, $2, $3, $4, $5, $6)', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion, activo]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
+    try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, subcategoria, imagen_url, descripcion, activo) VALUES ($1, $2, $3, $4, $5, $6, $7)', [req.body.nombre, req.body.precio, req.body.categoria, req.body.subcategoria, req.body.imagen_url, req.body.descripcion, activo]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
 });
 app.put('/api/admin/productos/:id', requireAuth, async (req, res) => { 
     const activo = req.body.activo !== false;
-    try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, imagen_url=$4, descripcion=$5, activo=$6 WHERE id=$7', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion, activo, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
+    try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, subcategoria=$4, imagen_url=$5, descripcion=$6, activo=$7 WHERE id=$8', [req.body.nombre, req.body.precio, req.body.categoria, req.body.subcategoria, req.body.imagen_url, req.body.descripcion, activo, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
 });
 app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
@@ -109,11 +105,9 @@ app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// NUEVO: Sanitización de Datos del Comprador en el Checkout
 app.post('/api/nueva-orden', async (req, res) => {
     const { items, comprador, metodo_pago, moneda } = req.body;
     
-    // Limpiamos los datos del cliente
     const nombreLimpio = xss(comprador.nombre);
     const telefonoLimpio = xss(comprador.telefono);
     const direccionLimpia = xss(comprador.direccion);
@@ -140,8 +134,13 @@ app.get('/fix-db', async (req, res) => {
         await pool.query('CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT)');
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
+        
+        await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS subcategoria VARCHAR(100)');
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true');
-        res.send('✅ Base de datos actualizada con Modo Tienda, Banner y Stock.');
+        
+        await pool.query(`UPDATE perfumes SET subcategoria = categoria, categoria = 'Perfumes' WHERE categoria IN ('Femenino', 'Masculino')`);
+        
+        res.send('✅ Base de datos actualizada: Subcategorías agregadas y perfumes viejos migrados con éxito.');
     } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 

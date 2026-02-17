@@ -39,7 +39,6 @@ async function initConfig() {
     if (document.getElementById('producto-detalle')) cargarProductoIndividual();
 }
 
-// ARREGLO: Ahora inyecta el botón sin romper el HTML en ninguna página
 function inyectarBotonMoneda() {
     if (document.getElementById('btn-moneda')) return;
     
@@ -50,10 +49,8 @@ function inyectarBotonMoneda() {
     const header = document.querySelector('header');
     
     if (headerActions) {
-        // En el Index.html nuevo
         headerActions.insertBefore(div, headerActions.querySelector('.cart-icon'));
     } else if (header) {
-        // En las páginas de Checkout o Producto
         div.style.marginLeft = 'auto'; 
         div.style.marginRight = '20px';
         const cartIcon = header.querySelector('.cart-icon');
@@ -82,7 +79,6 @@ function formatPrecio(precioBaseUYU) { return monedaActual === 'BRL' ? `R$ ${(pr
 function getWaLink(texto) { return `https://wa.me/${monedaActual === 'BRL' ? WA_BR : WA_UY}?text=${encodeURIComponent(texto)}`; }
 function actualizarLinkWhatsApp() { const waFloat = document.getElementById('wa-float'); if (waFloat) waFloat.href = `https://wa.me/${monedaActual === 'BRL' ? WA_BR : WA_UY}`; }
 
-// --- SISTEMA DE TOAST NOTIFICATIONS ---
 function showToast(mensaje, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -203,11 +199,28 @@ async function renderizarProductos(categoriaSeleccionada, searchQuery = '') {
         htmlAcumulado += `</div>`;
     } else {
         const categoriasARenderizar = categoriaSeleccionada === 'Todas' ? [...new Set(todosLosProductos.map(p => p.categoria))] : [categoriaSeleccionada]; 
+        
         for (const cat of categoriasARenderizar) {
             const productosDeCategoria = todosLosProductos.filter(p => p.categoria === cat);
+            
             if (productosDeCategoria.length > 0) {
-                if (categoriaSeleccionada === 'Todas') htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
-                htmlAcumulado += `<div class="products-grid">` + generarTarjetasHTML(productosDeCategoria) + `</div>`;
+                // TÍTULO MADRE
+                if (categoriaSeleccionada === 'Todas') {
+                    htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
+                }
+
+                // AGRUPACIÓN POR SUBCATEGORÍA
+                const subcategorias = [...new Set(productosDeCategoria.map(p => p.subcategoria || ''))];
+                
+                for (const sub of subcategorias) {
+                    const prodSub = productosDeCategoria.filter(p => (p.subcategoria || '') === sub);
+                    if (prodSub.length > 0) {
+                        if (sub !== '') {
+                            htmlAcumulado += `<h3 style="margin-top: 20px; margin-bottom: 15px; font-size: 1.3rem; color: var(--accent); border-bottom: 1px dashed var(--border); padding-bottom: 5px; width: fit-content;">${sub}</h3>`;
+                        }
+                        htmlAcumulado += `<div class="products-grid">` + generarTarjetasHTML(prodSub) + `</div>`;
+                    }
+                }
             }
         }
     }

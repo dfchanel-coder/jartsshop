@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - JART'S SHOP</title>
-    <link rel="stylesheet" href="style.css?v=4.0">
+    <link rel="stylesheet" href="style.css?v=7.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .admin-box { max-width: 1000px; margin: 40px auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 1px solid var(--border); }
@@ -64,8 +64,9 @@
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                 <input type="text" id="n-nombre" class="form-input" placeholder="Nombre del Producto">
                 <input type="number" id="n-precio" class="form-input" placeholder="Precio en PESOS (Ej: 1500)">
-                <input type="text" id="n-cat" class="form-input" placeholder="Categoría (Ej: Perfumes, Tecnología)">
-                <input type="url" id="n-img" class="form-input" placeholder="Link Directo Imagen">
+                <input type="text" id="n-cat" class="form-input" placeholder="Categoría Madre (Ej: Perfumes, Deportes)">
+                <input type="text" id="n-subcat" class="form-input" placeholder="Subcategoría (Opcional, Ej: Femenino, Pelotas)">
+                <input type="url" id="n-img" class="form-input" style="grid-column: 1 / -1;" placeholder="Link Directo Imagen">
                 <select id="n-stock" class="form-input" style="grid-column: 1 / -1;">
                     <option value="true">✅ Disponible en Stock</option>
                     <option value="false">❌ Agotado / Sin Stock</option>
@@ -86,7 +87,7 @@
         <div id="tab-pedidos" class="tab-content">
             <h3 style="margin-top:0; color:var(--text);">Listado de Órdenes</h3>
             <table id="tabla-pedidos">
-                <thead><tr><th>ID</th><th>Cliente / Envío</th><th>Monto / Pago</th><th>Estado</th></tr></thead>
+                <thead><tr><th>ID</th><th>Cliente / Envío</th><th>Monto / Pago</th><th>Estado</th><th>Acción</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -107,7 +108,10 @@
             <input type="hidden" id="e-id">
             <input type="text" id="e-nombre" class="form-input" placeholder="Nombre">
             <input type="number" id="e-precio" class="form-input" placeholder="Precio en Pesos">
-            <input type="text" id="e-cat" class="form-input" placeholder="Categoría">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="e-cat" class="form-input" placeholder="Cat. Madre">
+                <input type="text" id="e-subcat" class="form-input" placeholder="Subcategoría (Opcional)">
+            </div>
             <input type="url" id="e-img" class="form-input" placeholder="URL Imagen">
             <select id="e-stock" class="form-input">
                 <option value="true">✅ Disponible en Stock</option>
@@ -118,6 +122,6 @@
         </div>
     </div>
 
-    <script src="admin.js?v=4.0"></script>
+    <script src="admin.js?v=7.0"></script>
 </body>
 </html>
