@@ -82,8 +82,10 @@ app.put('/api/admin/productos/:id', requireAuth, async (req, res) => {
 });
 app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
+// --- NUEVO: RUTA PARA BORRAR ÓRDENES ---
 app.get('/api/admin/ordenes', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.post('/api/admin/orden-estado', requireAuth, async (req, res) => { try { await pool.query('UPDATE ordenes SET estado = $1 WHERE id = $2', [req.body.estado, req.body.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
+app.delete('/api/admin/ordenes/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM ordenes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
 app.get('/api/admin/resenas', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT r.*, p.nombre AS perfume_nombre FROM resenas r JOIN perfumes p ON r.perfume_id = p.id ORDER BY r.fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.delete('/api/admin/resenas/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM resenas WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
@@ -96,7 +98,6 @@ app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- CHECKOUT DINÁMICO ---
 app.post('/api/nueva-orden', async (req, res) => {
     const { items, comprador, metodo_pago, moneda } = req.body;
     const total = items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
@@ -116,16 +117,12 @@ app.post('/api/nueva-orden', async (req, res) => {
     } catch (error) { res.status(500).json({ error: 'Error procesando orden' }); }
 });
 
-// --- RUTA MÁGICA PARA SALVAR LOS PRODUCTOS VIEJOS ---
 app.get('/fix-db', async (req, res) => {
     try {
         await pool.query('CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT)');
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
-        
-        // ESTA LÍNEA AGREGA EL STOCK A LOS PERFUMES VIEJOS SIN BORRAR NADA
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true');
-        
         res.send('✅ Base de datos actualizada con Modo Tienda, Banner y Stock.');
     } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
