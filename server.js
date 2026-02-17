@@ -10,17 +10,9 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static('public'));
 
-app.use(session({
-    secret: 'jarts_secret_key_2026',
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false } 
-}));
+app.use(session({ secret: 'jarts_secret_key_2026', resave: false, saveUninitialized: true, cookie: { secure: false } }));
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
-});
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false });
 
 async function iniciarDB() {
     try {
@@ -32,24 +24,19 @@ async function iniciarDB() {
             CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT);
         `);
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
+        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
         console.log('--- BASE DE DATOS OK ---');
     } catch (err) { console.error('Error DB:', err); }
 }
 iniciarDB();
 
-// --- LOS DOS CEREBROS DE MERCADO PAGO ---
 let clientUY, clientBR;
 try { 
-    // Cliente UY: Usa el token actual de tu cuenta de Uruguay
     clientUY = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || 'DUMMY_UY' }); 
-    // Cliente BR: Usará la variable MP_ACCESS_TOKEN_BR cuando la consigas
     clientBR = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN_BR || 'DUMMY_BR' }); 
 } catch (e) { console.log('Esperando MP...'); }
 
-const requireAuth = (req, res, next) => {
-    if (!req.session.userId) return res.status(401).json({ error: 'No autorizado' });
-    next();
-};
+const requireAuth = (req, res, next) => { if (!req.session.userId) return res.status(401).json({ error: 'No autorizado' }); next(); };
 
 // --- PÚBLICO ---
 app.get('/api/perfumes', async (req, res) => {
@@ -61,11 +48,18 @@ app.get('/api/perfumes/:id/resenas', async (req, res) => {
 app.post('/api/perfumes/:id/resenas', async (req, res) => {
     try { await pool.query('INSERT INTO resenas (perfume_id, nombre, estrellas, comentario) VALUES ($1, $2, $3, $4)', [req.params.id, req.body.nombre, req.body.estrellas, req.body.comentario]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
 });
+
+// NUEVO: Devuelve cotización y banner al mismo tiempo
 app.get('/api/configuracion', async (req, res) => {
     try {
-        const result = await pool.query("SELECT valor FROM configuracion WHERE clave = 'cotizacion_brl'");
-        res.json({ cotizacion: result.rows.length > 0 ? parseFloat(result.rows[0].valor) : 8.50 });
-    } catch (err) { res.json({ cotizacion: 8.50 }); }
+        const result = await pool.query("SELECT clave, valor FROM configuracion");
+        const config = {};
+        result.rows.forEach(r => config[r.clave] = r.valor);
+        res.json({
+            cotizacion: config.cotizacion_brl ? parseFloat(config.cotizacion_brl) : 8.50,
+            banner_url: config.banner_url || ''
+        });
+    } catch (err) { res.json({ cotizacion: 8.50, banner_url: '' }); }
 });
 
 // --- ADMIN ---
@@ -90,60 +84,41 @@ app.post('/api/admin/orden-estado', requireAuth, async (req, res) => { try { awa
 app.get('/api/admin/resenas', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT r.*, p.nombre AS perfume_nombre FROM resenas r JOIN perfumes p ON r.perfume_id = p.id ORDER BY r.fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.delete('/api/admin/resenas/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM resenas WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
+// NUEVO: Guarda Cotización y Banner
 app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
-    try { await pool.query("UPDATE configuracion SET valor = $1 WHERE clave = 'cotizacion_brl'", [req.body.cotizacion]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
+    try {
+        if (req.body.cotizacion !== undefined) await pool.query("UPDATE configuracion SET valor = $1 WHERE clave = 'cotizacion_brl'", [req.body.cotizacion]);
+        if (req.body.banner_url !== undefined) await pool.query("UPDATE configuracion SET valor = $1 WHERE clave = 'banner_url'", [req.body.banner_url]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 // --- CHECKOUT DINÁMICO ---
 app.post('/api/nueva-orden', async (req, res) => {
     const { items, comprador, metodo_pago, moneda } = req.body;
     const total = items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
-    
     try {
-        // En tu Admin verás, por ejemplo: "PIX (BRL)" o "MERCADOPAGO_UY (UYU)"
         const metodoConMoneda = `${metodo_pago.toUpperCase()} (${moneda})`;
-        
-        const result = await pool.query(
-            'INSERT INTO ordenes (cliente_nombre, cliente_telefono, cliente_direccion, metodo_pago, items_json, total) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-            [comprador.nombre, comprador.telefono, comprador.direccion, metodoConMoneda, JSON.stringify(items), total]
-        );
+        const result = await pool.query('INSERT INTO ordenes (cliente_nombre, cliente_telefono, cliente_direccion, metodo_pago, items_json, total) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [comprador.nombre, comprador.telefono, comprador.direccion, metodoConMoneda, JSON.stringify(items), total]);
         const ordenId = result.rows[0].id;
 
-        // Si es pago por fuera de la plataforma (BROU, PIX, Banco do Brasil)
-        if (['brou', 'pix', 'bb'].includes(metodo_pago)) {
-            return res.json({ type: 'transfer', id: ordenId });
-        }
+        if (['brou', 'pix', 'bb'].includes(metodo_pago)) return res.json({ type: 'transfer', id: ordenId });
 
-        // Si es Mercado Pago, derivamos al cliente correcto
         if (metodo_pago.includes('mercadopago')) {
             const client = metodo_pago === 'mercadopago_br' ? clientBR : clientUY;
             const preference = new Preference(client);
-            
-            const response = await preference.create({
-                body: {
-                    items: items,
-                    external_reference: `${ordenId}`,
-                    back_urls: {
-                        success: "https://jarts-shop.onrender.com",
-                        failure: "https://jarts-shop.onrender.com",
-                        pending: "https://jarts-shop.onrender.com"
-                    },
-                    auto_return: "approved"
-                }
-            });
+            const response = await preference.create({ body: { items: items, external_reference: `${ordenId}`, back_urls: { success: "https://jarts-shop.onrender.com", failure: "https://jarts-shop.onrender.com", pending: "https://jarts-shop.onrender.com" }, auto_return: "approved" } });
             return res.json({ type: 'mp', id: response.id });
         }
-    } catch (error) { 
-        console.error(error);
-        res.status(500).json({ error: 'Error procesando orden' }); 
-    }
+    } catch (error) { res.status(500).json({ error: 'Error procesando orden' }); }
 });
 
 app.get('/fix-db', async (req, res) => {
     try {
         await pool.query('CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT)');
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
-        res.send('✅ Base de datos actualizada con Modo Brasil.');
+        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
+        res.send('✅ Base de datos actualizada con Modo Tienda y Banner.');
     } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 
