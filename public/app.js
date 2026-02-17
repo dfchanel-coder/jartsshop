@@ -113,54 +113,35 @@ function renderizarFiltros() {
 }
 function filtrarPor(cat) { categoriaActual = cat; renderizarFiltros(); renderizarProductos(cat); }
 
-// --- NUEVA LÓGICA DE AGRUPACIÓN (ESTILO DULCE MIMOS) ---
+// LÓGICA DE RENDERIZADO TURBO 🚀
 async function renderizarProductos(categoriaSeleccionada) {
     const container = document.getElementById('catalogo');
     container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
     const mainContainer = document.getElementById('grid-container-main');
 
-    // Comprobamos si no hay nada para mostrar
     if (todosLosProductos.length === 0 || (categoriaSeleccionada !== 'Todas' && !todosLosProductos.some(p => p.categoria === categoriaSeleccionada))) { 
         mainContainer.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-size:1.1rem; padding: 30px;">${textos[idioma].sinProd}</p>`; 
         return; 
     }
 
-    // Definimos qué categorías vamos a dibujar
     const categoriasARenderizar = categoriaSeleccionada === 'Todas' 
-        ? [...new Set(todosLosProductos.map(p => p.categoria))] // Todas las únicas
-        : [categoriaSeleccionada]; // Solo la seleccionada
+        ? [...new Set(todosLosProductos.map(p => p.categoria))] 
+        : [categoriaSeleccionada]; 
 
+    const filtrados = categoriaSeleccionada === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaSeleccionada);
     let htmlAcumulado = '';
 
     for (const cat of categoriasARenderizar) {
         const productosDeCategoria = todosLosProductos.filter(p => p.categoria === cat);
         
         if (productosDeCategoria.length > 0) {
-            // Si estamos viendo "Todas", dibujamos el título de cada bloque
             if (categoriaSeleccionada === 'Todas') {
-                htmlAcumulado += `
-                    <h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">
-                        ${cat}
-                    </h2>`;
+                htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
             }
-            
             htmlAcumulado += `<div class="products-grid">`;
             
-            // Renderizamos los productos de esta categoría
+            // Dibuja TODA la tarjeta instantáneamente (Nótese el loading="lazy" en la img)
             for (const p of productosDeCategoria) {
-                const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
-                const resenas = await resenasReq.json();
-                
-                let pText = '', tHTML = '';
-                if (resenas.length > 0) {
-                    const prom = (resenas.reduce((a, b) => a + b.estrellas, 0) / resenas.length).toFixed(1);
-                    pText = `⭐ ${prom} (${resenas.length})`;
-                    const msg = resenas[0].comentario.substring(0, 50) + (resenas[0].comentario.length > 50 ? '...' : '');
-                    tHTML = `<span class="stars-tooltip">"${msg}"<br><small style="color:var(--text-muted);">- ${resenas[0].nombre}</small></span>`;
-                } else {
-                    pText = `⭐ ${textos[idioma].nuevo}`; tHTML = `<span class="stars-tooltip">${textos[idioma].sePrimero}</span>`;
-                }
-
                 const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
                 const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${linkProd}` : `¡Mirá este producto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${linkProd}`;
                 const linkWA = getWaLink(msgWaText);
@@ -169,10 +150,12 @@ async function renderizarProductos(categoriaSeleccionada) {
                     <div class="product-card ${!p.activo ? 'agotado' : ''}">
                         <a href="/producto.html?id=${p.id}" style="text-decoration:none; color:inherit; display:block; position:relative;">
                             ${!p.activo ? `<div style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:0.8rem; z-index:2;">${textos[idioma].agotado}</div>` : ''}
-                            <img src="${p.imagen_url}" alt="${p.nombre}" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
+                            <img src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
                             <h3>${p.nombre}</h3>
                         </a>
-                        <div class="stars-container" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">${pText}${tHTML}</div>
+                        <div class="stars-container" id="stars-${p.id}" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">
+                            <span style="color:var(--text-muted); font-size:0.8rem;"><i class="fa fa-spinner fa-spin"></i> Cargando...</span>
+                        </div>
                         <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
                         <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
                         <div style="display:flex; gap:10px; margin-top:auto;">
@@ -185,7 +168,29 @@ async function renderizarProductos(categoriaSeleccionada) {
         }
     }
     
+    // Inyecta el HTML en la pantalla de golpe
     mainContainer.innerHTML = htmlAcumulado;
+
+    // MAGIA ASÍNCRONA: Descarga las estrellitas de fondo sin congelar la página
+    filtrados.forEach(async (p) => {
+        try {
+            const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
+            const resenas = await resenasReq.json();
+            const starBox = document.getElementById(`stars-${p.id}`);
+            if (!starBox) return;
+
+            let pText = '', tHTML = '';
+            if (resenas.length > 0) {
+                const prom = (resenas.reduce((a, b) => a + b.estrellas, 0) / resenas.length).toFixed(1);
+                pText = `⭐ ${prom} (${resenas.length})`;
+                const msg = resenas[0].comentario.substring(0, 50) + (resenas[0].comentario.length > 50 ? '...' : '');
+                tHTML = `<span class="stars-tooltip">"${msg}"<br><small style="color:var(--text-muted);">- ${resenas[0].nombre}</small></span>`;
+            } else {
+                pText = `⭐ ${textos[idioma].nuevo}`; tHTML = `<span class="stars-tooltip">${textos[idioma].sePrimero}</span>`;
+            }
+            starBox.innerHTML = pText + tHTML;
+        } catch (error) { console.error('Error cargando reseña', error); }
+    });
 }
 
 // --- PÁGINA DE PRODUCTO INDIVIDUAL ---
