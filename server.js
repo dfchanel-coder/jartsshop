@@ -12,7 +12,18 @@ app.use(cors());
 app.use(express.static('public'));
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'clave_temporal_desarrollo_2026';
-app.use(session({ secret: SESSION_SECRET, resave: false, saveUninitialized: true, cookie: { secure: false } }));
+
+// --- NUEVA CONFIGURACIÓN DE SESIÓN (30 MINUTOS) ---
+app.use(session({ 
+    secret: SESSION_SECRET, 
+    resave: false, 
+    saveUninitialized: true, 
+    rolling: true, // Reinicia el reloj de 30 min con cada acción
+    cookie: { 
+        secure: false, 
+        maxAge: 1800000 // 30 minutos exactos en milisegundos
+    } 
+}));
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false });
 
@@ -40,11 +51,10 @@ const requireAuth = (req, res, next) => { if (!req.session.userId) return res.st
 
 app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private'); next(); });
 
-// ¡ACÁ ESTÁ LA SOLUCIÓN! Ordena por nombre (A-Z)
+// ORDEN ALFABÉTICO (A-Z)
 app.get('/api/perfumes', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM perfumes ORDER BY nombre ASC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
 });
-
 app.get('/api/perfumes/:id', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM perfumes WHERE id = $1', [req.params.id]); res.json(result.rows[0]); } catch (err) { res.status(500).send(err.message); }
 });
