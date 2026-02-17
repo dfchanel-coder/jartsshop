@@ -23,8 +23,6 @@ async function iniciarDB() {
             CREATE TABLE IF NOT EXISTS resenas (id SERIAL PRIMARY KEY, perfume_id INT NOT NULL, nombre VARCHAR(100) NOT NULL, estrellas INT NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5), comentario TEXT, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT);
         `);
-        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
-        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
         console.log('--- BASE DE DATOS OK ---');
     } catch (err) { console.error('Error DB:', err); }
 }
@@ -38,6 +36,13 @@ try {
 
 const requireAuth = (req, res, next) => { if (!req.session.userId) return res.status(401).json({ error: 'No autorizado' }); next(); };
 
+// --- SISTEMA ANTI-CACHÉ PARA LA API ---
+// Esto obliga a los navegadores y al dominio a pedir la info en vivo SIEMPRE.
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    next();
+});
+
 // --- PÚBLICO ---
 app.get('/api/perfumes', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM perfumes ORDER BY id DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
@@ -49,7 +54,6 @@ app.post('/api/perfumes/:id/resenas', async (req, res) => {
     try { await pool.query('INSERT INTO resenas (perfume_id, nombre, estrellas, comentario) VALUES ($1, $2, $3, $4)', [req.params.id, req.body.nombre, req.body.estrellas, req.body.comentario]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
 });
 
-// NUEVO: Devuelve cotización y banner al mismo tiempo
 app.get('/api/configuracion', async (req, res) => {
     try {
         const result = await pool.query("SELECT clave, valor FROM configuracion");
@@ -77,18 +81,20 @@ app.get('/setup-admin', async (req, res) => { try { const hash = await bcrypt.ha
 app.post('/api/admin/productos', requireAuth, async (req, res) => { try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion) VALUES ($1, $2, $3, $4, $5)', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 app.put('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, imagen_url=$4, descripcion=$5 WHERE id=$6', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
-
 app.get('/api/admin/ordenes', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.post('/api/admin/orden-estado', requireAuth, async (req, res) => { try { await pool.query('UPDATE ordenes SET estado = $1 WHERE id = $2', [req.body.estado, req.body.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
-
 app.get('/api/admin/resenas', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT r.*, p.nombre AS perfume_nombre FROM resenas r JOIN perfumes p ON r.perfume_id = p.id ORDER BY r.fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.delete('/api/admin/resenas/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM resenas WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
-// NUEVO: Guarda Cotización y Banner
+// NUEVO SISTEMA UPSERT (Si no existe, lo crea. Si existe, lo actualiza).
 app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
     try {
-        if (req.body.cotizacion !== undefined) await pool.query("UPDATE configuracion SET valor = $1 WHERE clave = 'cotizacion_brl'", [req.body.cotizacion]);
-        if (req.body.banner_url !== undefined) await pool.query("UPDATE configuracion SET valor = $1 WHERE clave = 'banner_url'", [req.body.banner_url]);
+        if (req.body.cotizacion !== undefined) {
+            await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.cotizacion]);
+        }
+        if (req.body.banner_url !== undefined) {
+            await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.banner_url]);
+        }
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -111,15 +117,6 @@ app.post('/api/nueva-orden', async (req, res) => {
             return res.json({ type: 'mp', id: response.id });
         }
     } catch (error) { res.status(500).json({ error: 'Error procesando orden' }); }
-});
-
-app.get('/fix-db', async (req, res) => {
-    try {
-        await pool.query('CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT)');
-        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
-        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
-        res.send('✅ Base de datos actualizada con Modo Tienda y Banner.');
-    } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 
 app.listen(process.env.PORT || 3000, () => console.log('Servidor OK'));

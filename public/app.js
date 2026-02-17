@@ -9,7 +9,7 @@ let idioma = monedaActual === 'BRL' ? 'pt' : 'es';
 const WA_UY = '59899822758';
 const WA_BR = '5555996679276';
 
-// Textos dinámicos genéricos (Ya no dicen solo "perfume")
+// Textos dinámicos genéricos
 const textos = {
     es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría." },
     pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria." }
@@ -113,7 +113,7 @@ function irAlCheckout() { window.location.href = '/checkout.html'; }
 // --- CATÁLOGO ---
 async function cargarCatalogo() {
     if (todosLosProductos.length === 0) {
-        const res = await fetch('/api/perfumes'); // Se mantiene la API original para no romper la BD
+        const res = await fetch('/api/perfumes'); 
         todosLosProductos = await res.json();
     }
     renderizarFiltros();
