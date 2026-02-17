@@ -40,9 +40,11 @@ const requireAuth = (req, res, next) => { if (!req.session.userId) return res.st
 
 app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private'); next(); });
 
+// ¡ACÁ ESTÁ LA SOLUCIÓN! Ordena por nombre (A-Z)
 app.get('/api/perfumes', async (req, res) => {
-    try { const result = await pool.query('SELECT * FROM perfumes ORDER BY id DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
+    try { const result = await pool.query('SELECT * FROM perfumes ORDER BY nombre ASC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
 });
+
 app.get('/api/perfumes/:id', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM perfumes WHERE id = $1', [req.params.id]); res.json(result.rows[0]); } catch (err) { res.status(500).send(err.message); }
 });
