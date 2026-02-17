@@ -34,18 +34,32 @@ async function initConfig() {
     
     if (document.getElementById('catalogo')) {
         cargarCatalogo();
-        configurarBuscador(); // Iniciamos el motor de búsqueda
+        configurarBuscador();
     }
     if (document.getElementById('producto-detalle')) cargarProductoIndividual();
 }
 
+// ARREGLO: Ahora inyecta el botón sin romper el HTML en ninguna página
 function inyectarBotonMoneda() {
-    const header = document.querySelector('header');
-    if (!header || document.getElementById('btn-moneda')) return;
+    if (document.getElementById('btn-moneda')) return;
+    
     const div = document.createElement('div');
-    div.style.marginLeft = 'auto'; div.style.marginRight = '20px';
     div.innerHTML = `<button id="btn-moneda" onclick="cambiarMoneda()" style="background:var(--card-bg); border:1px solid var(--border); padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:600; color:var(--text); font-size:1.05rem; transition:0.3s; font-family:'Inter', sans-serif;">${monedaActual === 'UYU' ? '🇺🇾 UYU' : '🇧🇷 BRL'}</button>`;
-    header.insertBefore(div, header.querySelector('.cart-icon'));
+    
+    const headerActions = document.querySelector('.header-actions');
+    const header = document.querySelector('header');
+    
+    if (headerActions) {
+        // En el Index.html nuevo
+        headerActions.insertBefore(div, headerActions.querySelector('.cart-icon'));
+    } else if (header) {
+        // En las páginas de Checkout o Producto
+        div.style.marginLeft = 'auto'; 
+        div.style.marginRight = '20px';
+        const cartIcon = header.querySelector('.cart-icon');
+        if (cartIcon) header.insertBefore(div, cartIcon);
+        else header.appendChild(div);
+    }
 }
 
 function cambiarMoneda() {
@@ -56,7 +70,6 @@ function cambiarMoneda() {
 
 function aplicarTraduccionesDOM() { 
     document.querySelectorAll('[data-es]').forEach(el => {
-        // Soporte para placeholders (Buscador) y textos normales
         if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
             el.placeholder = el.getAttribute(`data-${idioma}`);
         } else {
@@ -69,19 +82,18 @@ function formatPrecio(precioBaseUYU) { return monedaActual === 'BRL' ? `R$ ${(pr
 function getWaLink(texto) { return `https://wa.me/${monedaActual === 'BRL' ? WA_BR : WA_UY}?text=${encodeURIComponent(texto)}`; }
 function actualizarLinkWhatsApp() { const waFloat = document.getElementById('wa-float'); if (waFloat) waFloat.href = `https://wa.me/${monedaActual === 'BRL' ? WA_BR : WA_UY}`; }
 
-// --- NUEVO: SISTEMA DE TOAST NOTIFICATIONS ---
+// --- SISTEMA DE TOAST NOTIFICATIONS ---
 function showToast(mensaje, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${tipo}`;
-    toast.innerHTML = tipo === 'success' ? `<i class="fa fa-check-circle" style="font-size:1.2rem;"></i> ${mensaje}` : `<i class="fa fa-exclamation-circle" style="font-size:1.2rem;"></i> ${mensaje}`;
+    toast.innerHTML = tipo === 'success' ? `<i class="fa fa-check-circle" style="font-size:1.2rem; color:#10b981;"></i> ${mensaje}` : `<i class="fa fa-exclamation-circle" style="font-size:1.2rem; color:#ef4444;"></i> ${mensaje}`;
     container.appendChild(toast);
     
-    // Desaparece a los 3 segundos
     setTimeout(() => {
         toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 400); // Espera que termine la animación css
+        setTimeout(() => toast.remove(), 400); 
     }, 3000);
 }
 
@@ -91,7 +103,6 @@ function agregarAlCarrito(id, title, unit_price) {
     const existe = carrito.find(i => i.id === id);
     if (existe) existe.quantity++; else carrito.push({ id, title, unit_price, quantity: 1 });
     guardarCarrito(); 
-    // Ya no abrimos el carrito abruptamente, mostramos el Toast
     showToast(textos[idioma].agregado, 'success');
 }
 function actualizarCarritoUI() {
@@ -99,7 +110,6 @@ function actualizarCarritoUI() {
     if (countEl) {
         const totalItems = carrito.reduce((a, b) => a + b.quantity, 0);
         countEl.innerText = totalItems;
-        // Animación de latido al actualizar
         countEl.style.transform = 'scale(1.3)';
         setTimeout(() => countEl.style.transform = 'scale(1)', 200);
     }
@@ -133,11 +143,10 @@ function vaciarCarrito() { carrito = []; guardarCarrito(); }
 function toggleCart() { const modal = document.getElementById('cart-modal'); if (modal) modal.style.display = modal.style.display === 'block' ? 'none' : 'block'; }
 function irAlCheckout() { window.location.href = '/checkout.html'; }
 
-// --- NUEVO: MOTOR DE BÚSQUEDA ---
+// --- MOTOR DE BÚSQUEDA ---
 function configurarBuscador() {
     const inputBuscador = document.getElementById('buscador-productos');
     if (!inputBuscador) return;
-
     inputBuscador.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
         renderizarProductos(categoriaActual, query);
@@ -162,27 +171,20 @@ function renderizarFiltros() {
 }
 function filtrarPor(cat) { 
     categoriaActual = cat; 
-    document.getElementById('buscador-productos').value = ''; // Limpiamos el buscador al tocar un filtro
+    document.getElementById('buscador-productos').value = ''; 
     renderizarFiltros(); 
     renderizarProductos(cat); 
 }
 
-// --- RENDERIZADO TURBO CON SOPORTE PARA BUSCADOR ---
 async function renderizarProductos(categoriaSeleccionada, searchQuery = '') {
     const container = document.getElementById('catalogo');
     container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
     const mainContainer = document.getElementById('grid-container-main');
 
-    // 1. Filtrar los productos
     let filtrados = [];
     if (searchQuery !== '') {
-        // Busca en toda la tienda ignorando la categoría seleccionada
-        filtrados = todosLosProductos.filter(p => 
-            p.nombre.toLowerCase().includes(searchQuery) || 
-            (p.descripcion && p.descripcion.toLowerCase().includes(searchQuery))
-        );
+        filtrados = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(searchQuery) || (p.descripcion && p.descripcion.toLowerCase().includes(searchQuery)));
     } else {
-        // Muestra la categoría normal
         filtrados = categoriaSeleccionada === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaSeleccionada);
     }
 
@@ -194,33 +196,24 @@ async function renderizarProductos(categoriaSeleccionada, searchQuery = '') {
 
     let htmlAcumulado = '';
 
-    // 2. Construir la estructura visual
     if (searchQuery !== '') {
-        // Si hay búsqueda, mostramos los resultados en un solo bloque
         const tituloBusqueda = idioma === 'pt' ? 'Resultados da Pesquisa' : 'Resultados de Búsqueda';
         htmlAcumulado += `<h2 style="margin-top: 20px; margin-bottom: 25px; font-size: 1.5rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 10px;">${tituloBusqueda}</h2><div class="products-grid">`;
         htmlAcumulado += generarTarjetasHTML(filtrados);
         htmlAcumulado += `</div>`;
     } else {
-        // Si NO hay búsqueda, mostramos agrupado por categorías (Modo Pasillo)
         const categoriasARenderizar = categoriaSeleccionada === 'Todas' ? [...new Set(todosLosProductos.map(p => p.categoria))] : [categoriaSeleccionada]; 
-        
         for (const cat of categoriasARenderizar) {
             const productosDeCategoria = todosLosProductos.filter(p => p.categoria === cat);
             if (productosDeCategoria.length > 0) {
-                if (categoriaSeleccionada === 'Todas') {
-                    htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
-                }
-                htmlAcumulado += `<div class="products-grid">`;
-                htmlAcumulado += generarTarjetasHTML(productosDeCategoria);
-                htmlAcumulado += `</div>`;
+                if (categoriaSeleccionada === 'Todas') htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
+                htmlAcumulado += `<div class="products-grid">` + generarTarjetasHTML(productosDeCategoria) + `</div>`;
             }
         }
     }
     
     mainContainer.innerHTML = htmlAcumulado;
 
-    // 3. Magia Asíncrona (Descarga estrellitas de fondo sin trancar)
     filtrados.forEach(async (p) => {
         try {
             const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
@@ -242,7 +235,6 @@ async function renderizarProductos(categoriaSeleccionada, searchQuery = '') {
     });
 }
 
-// Helper para no repetir código de HTML
 function generarTarjetasHTML(arrayDeProductos) {
     let html = '';
     for (const p of arrayDeProductos) {
