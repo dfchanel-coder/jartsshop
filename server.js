@@ -4,13 +4,16 @@ const cors = require('cors');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
+const xss = require('xss'); // NUEVO: Herramienta de seguridad anti-hackeo
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static('public'));
 
-app.use(session({ secret: 'jarts_secret_key_2026', resave: false, saveUninitialized: true, cookie: { secure: false } }));
+// SEGURIDAD: La clave de sesión ahora está protegida en Render
+const SESSION_SECRET = process.env.SESSION_SECRET || 'clave_temporal_desarrollo_2026';
+app.use(session({ secret: SESSION_SECRET, resave: false, saveUninitialized: true, cookie: { secure: false } }));
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false });
 
@@ -48,8 +51,17 @@ app.get('/api/perfumes/:id', async (req, res) => {
 app.get('/api/perfumes/:id/resenas', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM resenas WHERE perfume_id = $1 ORDER BY fecha DESC', [req.params.id]); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
 });
+
+// NUEVO: Sanitización de Reseñas
 app.post('/api/perfumes/:id/resenas', async (req, res) => {
-    try { await pool.query('INSERT INTO resenas (perfume_id, nombre, estrellas, comentario) VALUES ($1, $2, $3, $4)', [req.params.id, req.body.nombre, req.body.estrellas, req.body.comentario]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); }
+    try { 
+        // Limpiamos los textos antes de mandarlos a la base de datos
+        const nombreLimpio = xss(req.body.nombre);
+        const comentarioLimpio = xss(req.body.comentario);
+        
+        await pool.query('INSERT INTO resenas (perfume_id, nombre, estrellas, comentario) VALUES ($1, $2, $3, $4)', [req.params.id, nombreLimpio, req.body.estrellas, comentarioLimpio]); 
+        res.json({ success: true }); 
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 app.get('/api/configuracion', async (req, res) => {
@@ -82,7 +94,6 @@ app.put('/api/admin/productos/:id', requireAuth, async (req, res) => {
 });
 app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
-// --- NUEVO: RUTA PARA BORRAR ÓRDENES ---
 app.get('/api/admin/ordenes', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.post('/api/admin/orden-estado', requireAuth, async (req, res) => { try { await pool.query('UPDATE ordenes SET estado = $1 WHERE id = $2', [req.body.estado, req.body.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 app.delete('/api/admin/ordenes/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM ordenes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
@@ -98,12 +109,19 @@ app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// NUEVO: Sanitización de Datos del Comprador en el Checkout
 app.post('/api/nueva-orden', async (req, res) => {
     const { items, comprador, metodo_pago, moneda } = req.body;
+    
+    // Limpiamos los datos del cliente
+    const nombreLimpio = xss(comprador.nombre);
+    const telefonoLimpio = xss(comprador.telefono);
+    const direccionLimpia = xss(comprador.direccion);
+
     const total = items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
     try {
         const metodoConMoneda = `${metodo_pago.toUpperCase()} (${moneda})`;
-        const result = await pool.query('INSERT INTO ordenes (cliente_nombre, cliente_telefono, cliente_direccion, metodo_pago, items_json, total) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [comprador.nombre, comprador.telefono, comprador.direccion, metodoConMoneda, JSON.stringify(items), total]);
+        const result = await pool.query('INSERT INTO ordenes (cliente_nombre, cliente_telefono, cliente_direccion, metodo_pago, items_json, total) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [nombreLimpio, telefonoLimpio, direccionLimpia, metodoConMoneda, JSON.stringify(items), total]);
         const ordenId = result.rows[0].id;
 
         if (['brou', 'pix', 'bb'].includes(metodo_pago)) return res.json({ type: 'transfer', id: ordenId });
