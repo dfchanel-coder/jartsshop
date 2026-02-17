@@ -101,7 +101,6 @@
         let metodoPagoElegido = monedaActual === 'UYU' ? 'brou' : 'pix'; 
         let subtotalUYU = 0;
 
-        // Datos Bancarios adaptados a Dark Mode
         const bancos = {
             brou: `<h4 style="margin-top:0; color:var(--gold);">Datos BROU</h4><p style="color:var(--text);"><strong>Caja Ahorro Pesos:</strong> 110356121-00001</p><p style="color:var(--text);"><strong>Titular:</strong> DA COSTA GONZALEZ LEONARDO JAVIER</p>`,
             pix: `<h4 style="margin-top:0; color:#32bcad;">Chave PIX</h4><p style="color:var(--text);"><strong>PIX Celular:</strong> 55996679276</p><p style="color:var(--text);"><strong>Titular:</strong> Leonardo J. Costa Gonzalez</p>`,
@@ -154,17 +153,17 @@
             metodoPagoElegido = metodo;
             document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
             
-            let idBoton = 'opt-' + metodo;
-            if (metodo === 'mercadopago_uy') idBoton = 'opt-mp-uy';
-            if (metodo === 'mercadopago_br') idBoton = 'opt-mp-br';
-            
+            let idBoton = 'opt-' + metodo.replace('_uy', '-uy').replace('_br', '-br');
             const boton = document.getElementById(idBoton);
             if(boton) boton.classList.add('selected');
             
             const infoBanco = document.getElementById('info-banco');
             const wallet = document.getElementById('wallet_container');
-            wallet.innerHTML = '';
+            const btnProcesar = document.getElementById('btn-procesar');
             
+            wallet.innerHTML = ''; // Limpiamos el botón de MP anterior
+            btnProcesar.style.display = 'block'; // Volvemos a mostrar el botón normal por defecto
+
             if (metodo.includes('mercadopago')) {
                 infoBanco.style.display = 'none';
             } else {
@@ -196,11 +195,14 @@
                 const data = await res.json();
                 
                 if (data.type === 'mp') {
-                    btn.style.display = 'none'; 
-                    // Se agregó el tema Oscuro ('dark') de Mercado Pago
+                    btn.style.display = 'none'; // Aquí sí lo ocultamos porque aparece el de MP
                     mpCheckoutUY.bricks().create("wallet", "wallet_container", { 
                         initialization: { preferenceId: data.id },
-                        customization: { visual: { buttonBackground: 'black', theme: 'dark' } }
+                        customization: { 
+                            visual: { 
+                                theme: 'default' 
+                            } 
+                        }
                     });
                 } else {
                     document.getElementById('checkout-form').style.display = 'none';
