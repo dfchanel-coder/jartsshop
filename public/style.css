@@ -66,6 +66,14 @@ header { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); paddin
 .faq-item { background: var(--card-bg); padding: 18px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; transition: 0.3s; }
 .faq-item:hover { border-color: var(--text-muted); }
 
+/* --- ESTILOS DE LOS MÉTODOS DE PAGO (CHECKOUT) --- */
+.payment-option { display: flex; align-items: center; gap: 15px; padding: 15px; border: 2px solid var(--border); border-radius: 10px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s ease; background: rgba(0, 0, 0, 0.2); }
+.payment-option:hover { border-color: rgba(255, 255, 255, 0.3); }
+.payment-option.selected { border-color: var(--accent); background: rgba(37, 99, 235, 0.05); }
+.payment-option i { font-size: 1.8rem; }
+.payment-option div { display: flex; flex-direction: column; color: var(--text); font-weight: 600; font-size: 1.05rem; }
+.payment-option small { font-weight: normal; font-size: 0.85rem; margin-top: 3px; }
+
 footer { background: var(--card-bg); color: var(--text-muted); text-align: center; padding: 40px 20px; margin-top: 50px; border-top: 1px solid var(--border); }
 footer a { color: var(--accent); text-decoration: none; font-weight: 600; transition: 0.3s; }
 footer a:hover { text-shadow: 0 0 8px rgba(59,130,246,0.5); }
