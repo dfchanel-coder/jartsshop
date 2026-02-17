@@ -145,16 +145,4 @@ app.get('/fix-db', async (req, res) => {
     } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 
-// --- RUTA TEMPORAL PARA CAMBIAR CREDENCIALES ---
-app.get('/setup-admin', async (req, res) => {
-    try {
-        const hash = await bcrypt.hash('Despegue26!!', 10);
-        await pool.query('DELETE FROM usuarios_admin'); 
-        await pool.query('INSERT INTO usuarios_admin (usuario, password) VALUES ($1, $2)', ['javierdc', hash]);
-        res.send('✅ Credenciales actualizadas. Nuevo usuario: javierdc. Ya puedes ir a loguearte.');
-    } catch (err) {
-        res.status(500).send('❌ Error: ' + err.message);
-    }
-});
-
 app.listen(process.env.PORT || 3000, () => console.log('Servidor OK'));
