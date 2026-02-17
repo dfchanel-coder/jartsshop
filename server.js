@@ -40,7 +40,6 @@ const requireAuth = (req, res, next) => { if (!req.session.userId) return res.st
 
 app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private'); next(); });
 
-// --- PÚBLICO ---
 app.get('/api/perfumes', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM perfumes ORDER BY id DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
 });
@@ -65,8 +64,12 @@ app.get('/api/configuracion', async (req, res) => {
         const result = await pool.query("SELECT clave, valor FROM configuracion");
         const config = {};
         result.rows.forEach(r => config[r.clave] = r.valor);
-        res.json({ cotizacion: config.cotizacion_brl ? parseFloat(config.cotizacion_brl) : 8.50, banner_url: config.banner_url || '' });
-    } catch (err) { res.json({ cotizacion: 8.50, banner_url: '' }); }
+        res.json({ 
+            cotizacion: config.cotizacion_brl ? parseFloat(config.cotizacion_brl) : 8.50, 
+            banner_url: config.banner_url || '',
+            mensaje_envios: config.mensaje_envios || '' // NUEVO
+        });
+    } catch (err) { res.json({ cotizacion: 8.50, banner_url: '', mensaje_envios: '' }); }
 });
 
 // --- ADMIN ---
@@ -101,17 +104,16 @@ app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
     try {
         if (req.body.cotizacion !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.cotizacion]);
         if (req.body.banner_url !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.banner_url]);
+        if (req.body.mensaje_envios !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('mensaje_envios', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.mensaje_envios]); // NUEVO
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.post('/api/nueva-orden', async (req, res) => {
     const { items, comprador, metodo_pago, moneda } = req.body;
-    
     const nombreLimpio = xss(comprador.nombre);
     const telefonoLimpio = xss(comprador.telefono);
     const direccionLimpia = xss(comprador.direccion);
-
     const total = items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
     try {
         const metodoConMoneda = `${metodo_pago.toUpperCase()} (${moneda})`;
@@ -134,13 +136,12 @@ app.get('/fix-db', async (req, res) => {
         await pool.query('CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT)');
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
+        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('mensaje_envios', '') ON CONFLICT DO NOTHING"); // NUEVO
         
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS subcategoria VARCHAR(100)');
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true');
-        
         await pool.query(`UPDATE perfumes SET subcategoria = categoria, categoria = 'Perfumes' WHERE categoria IN ('Femenino', 'Masculino')`);
-        
-        res.send('✅ Base de datos actualizada: Subcategorías agregadas y perfumes viejos migrados con éxito.');
+        res.send('✅ Base de datos actualizada: Subcategorías y Mensajes de envío listos.');
     } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 

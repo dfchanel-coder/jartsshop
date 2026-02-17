@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JART'S SHOP</title>
     <meta name="description" content="JART'S SHOP. La mejor tienda online de la frontera.">
-    <link rel="stylesheet" href="style.css?v=5.0">
+    <link rel="stylesheet" href="style.css?v=8.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <div id="top-announcement" style="display:none; background: var(--accent); color: white; text-align: center; padding: 8px 15px; font-size: 0.9rem; font-weight: 600; letter-spacing: 0.5px; z-index: 200; position: relative; width: 100%; box-sizing: border-box;"></div>
+
     <header>
         <div class="logo" onclick="window.location.reload()">JART'S <span>SHOP</span></div>
-        
         <div class="search-box">
             <i class="fa fa-search"></i>
             <input type="text" id="buscador-productos" placeholder="Buscar productos, tecnología, perfumes..." data-es="Buscar productos..." data-pt="Pesquisar produtos...">
         </div>
-
         <div class="header-actions">
             <div class="cart-icon" onclick="toggleCart()"><i class="fa fa-shopping-bag"></i><span id="cart-count">0</span></div>
         </div>
@@ -24,7 +24,6 @@
 
     <main>
         <div class="container" id="banner-section" style="display:none; margin-top: 20px; margin-bottom: 30px;"></div>
-        
         <div class="container">
             <div class="filter-container" id="filtros-categoria"></div>
             <div id="catalogo"><p style="text-align:center; padding:50px; color:var(--text-muted);" data-es="Cargando catálogo..." data-pt="Carregando catálogo...">Cargando catálogo...</p></div>
@@ -74,13 +73,11 @@
     </div>
 
     <div id="toast-container"></div>
-
     <a href="#" id="wa-float" class="whatsapp-float" target="_blank"><i class="fab fa-whatsapp"></i></a>
     <footer>
         <p>Desarrollado por <a href="https://www.fbinformaticauy.com" target="_blank">FB Informática</a></p>
         <p>&copy; 2026 JART'S SHOP. Todos los derechos reservados.</p>
     </footer>
-    
-    <script src="app.js?v=5.0"></script>
+    <script src="app.js?v=8.0"></script>
 </body>
 </html>

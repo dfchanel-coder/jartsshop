@@ -180,21 +180,29 @@ async function borrarResena(id) {
     } 
 }
 
+// NUEVO: Lee el campo de envíos al cargar el panel
 async function cargarConfiguracionAdmin() {
     try {
         const res = await fetch('/api/configuracion?t=' + new Date().getTime(), { cache: 'no-store' });
         const data = await res.json();
         document.getElementById('adm-cotizacion').value = data.cotizacion;
         document.getElementById('adm-banner').value = data.banner_url || '';
+        document.getElementById('adm-envios').value = data.mensaje_envios || '';
     } catch(e) { console.error('Error config', e); }
 }
 
+// NUEVO: Manda el mensaje de envíos a la base de datos
 async function guardarConfiguracion() {
     const cotizacion = document.getElementById('adm-cotizacion').value;
     const bannerUrl = document.getElementById('adm-banner').value;
+    const mensajeEnvios = document.getElementById('adm-envios').value; 
     if(!cotizacion) return;
     
-    await adminFetch('/api/admin/configuracion', { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ cotizacion: cotizacion, banner_url: bannerUrl }) });
+    await adminFetch('/api/admin/configuracion', { 
+        method: 'PUT', 
+        headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify({ cotizacion: cotizacion, banner_url: bannerUrl, mensaje_envios: mensajeEnvios }) 
+    });
     alert('✅ Configuración guardada correctamente.');
 }
 

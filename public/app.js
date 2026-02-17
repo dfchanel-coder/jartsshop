@@ -1,8 +1,7 @@
-// Borramos el carrito viejo si existe para evitar conflictos con la nueva estructura
 if (localStorage.getItem('jarts_carrito')) {
     const tempCart = JSON.parse(localStorage.getItem('jarts_carrito'));
     if (tempCart.length > 0 && !tempCart[0].categoria) {
-        localStorage.removeItem('jarts_carrito'); // Limpiamos si es formato viejo
+        localStorage.removeItem('jarts_carrito'); 
     }
 }
 
@@ -11,14 +10,12 @@ let todosLosProductos = [];
 let categoriaActual = 'Todas';
 let subcategoriaActual = 'Todas'; 
 
-// --- MULTIMONEDA E IDIOMA ---
 let cotizacionBRL = 8.50; 
 let monedaActual = localStorage.getItem('jarts_moneda') || 'UYU';
 let idioma = monedaActual === 'BRL' ? 'pt' : 'es';
 const WA_UY = '59899822758';
 const WA_BR = '5555996679276';
 
-// NUEVO: Agregamos el texto del límite
 const textos = {
     es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría.", agotado: "Sin Stock", agregado: "¡Agregado al carrito!", sinBusqueda: "No se encontraron resultados.", limitePerfumes: "Límite máximo: 2 perfumes por pedido." },
     pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria.", agotado: "Esgotado", agregado: "Adicionado ao carrinho!", sinBusqueda: "Nenhum resultado encontrado.", limitePerfumes: "Limite máximo: 2 perfumes por pedido." }
@@ -30,6 +27,13 @@ async function initConfig() {
         const data = await res.json();
         cotizacionBRL = data.cotizacion || 8.50;
         
+        // NUEVO: Barra de envíos
+        const topBar = document.getElementById('top-announcement');
+        if (topBar && data.mensaje_envios && data.mensaje_envios.trim() !== '') {
+            topBar.innerText = data.mensaje_envios;
+            topBar.style.display = 'block';
+        }
+
         const bannerSection = document.getElementById('banner-section');
         if (bannerSection && data.banner_url && data.banner_url.trim() !== '') {
             bannerSection.innerHTML = `<div class="banner-container fade-in"><img src="${data.banner_url}" alt="Banner Promocional"></div>`;
@@ -109,17 +113,14 @@ async function compartirProducto(titulo, texto, url) {
 // --- CARRITO INTELIGENTE ---
 function guardarCarrito() { localStorage.setItem('jarts_carrito', JSON.stringify(carrito)); actualizarCarritoUI(); }
 
-// NUEVO: Ahora recibe la categoría y aplica el límite
 function agregarAlCarrito(id, title, unit_price, categoria) {
-    // Regla de Negocio: Máximo 2 perfumes en total por pedido
     if (categoria === 'Perfumes') {
         const cantidadDePerfumesEnCarrito = carrito.filter(item => item.categoria === 'Perfumes').reduce((suma, item) => suma + item.quantity, 0);
         if (cantidadDePerfumesEnCarrito >= 2) {
             showToast(textos[idioma].limitePerfumes, 'error');
-            return; // Corta la ejecución, no lo agrega
+            return; 
         }
     }
-
     const existe = carrito.find(i => i.id === id);
     if (existe) existe.quantity++; else carrito.push({ id, title, unit_price, quantity: 1, categoria: categoria });
     guardarCarrito(); 
@@ -158,7 +159,6 @@ function actualizarCarritoUI() {
     if (totalEl) totalEl.innerText = formatPrecio(carrito.reduce((a, b) => a + (b.unit_price * b.quantity), 0));
 }
 
-// NUEVO: El botón de sumar también respeta el límite
 function sumarItem(index) { 
     if (carrito[index].categoria === 'Perfumes') {
         const cantidadDePerfumesEnCarrito = carrito.filter(item => item.categoria === 'Perfumes').reduce((suma, item) => suma + item.quantity, 0);
@@ -307,7 +307,6 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
     });
 }
 
-// NUEVO: Pasamos p.categoria a la función onclick
 function generarTarjetasHTML(arrayDeProductos) {
     let html = '';
     for (const p of arrayDeProductos) {
@@ -360,11 +359,10 @@ async function cargarProductoIndividual() {
         btn.style.cursor = 'not-allowed';
     } else {
         document.getElementById('p-btn-add').innerText = textos[idioma].agregar;
-        // NUEVO: Pasa la categoría
         document.getElementById('p-btn-add').onclick = () => agregarAlCarrito(p.id, p.nombre, p.precio, p.categoria);
     }
 
-    const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este producto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
+    const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este produto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
     const shareUrl = window.location.href;
     const btnShare = document.getElementById('p-btn-wa');
     if (btnShare) {

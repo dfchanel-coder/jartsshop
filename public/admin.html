@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - JART'S SHOP</title>
-    <link rel="stylesheet" href="style.css?v=7.0">
+    <link rel="stylesheet" href="style.css?v=8.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .admin-box { max-width: 1000px; margin: 40px auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 1px solid var(--border); }
@@ -47,6 +47,10 @@
                 <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
                     <strong style="color:var(--accent); width: 150px;">Banner Principal:</strong>
                     <input type="url" id="adm-banner" class="form-input" style="flex:1; margin:0;" placeholder="Link directo de Postimages (.jpg o .png)">
+                </div>
+                <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                    <strong style="color:var(--accent); width: 150px;">Aviso / Envíos:</strong>
+                    <input type="text" id="adm-envios" class="form-input" style="flex:1; margin:0;" placeholder="Ej: Cerramos pedidos hoy 18hs. Envíos el viernes. (Dejar en blanco para ocultar)">
                 </div>
             </div>
             <button class="btn-add" onclick="guardarConfiguracion()" style="width:auto; padding:12px 25px; margin-top:15px; background: var(--accent);">Guardar Configuración</button>
@@ -122,6 +126,6 @@
         </div>
     </div>
 
-    <script src="admin.js?v=7.0"></script>
+    <script src="admin.js?v=8.0"></script>
 </body>
 </html>
