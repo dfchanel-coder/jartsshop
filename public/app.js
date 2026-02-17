@@ -17,7 +17,8 @@ const textos = {
 
 async function initConfig() {
     try {
-        const res = await fetch('/api/configuracion');
+        // Truco Anti-Caché activado
+        const res = await fetch('/api/configuracion?t=' + new Date().getTime(), { cache: 'no-store' });
         const data = await res.json();
         cotizacionBRL = data.cotizacion || 8.50;
         
@@ -33,6 +34,7 @@ async function initConfig() {
     inyectarBotonMoneda();
     aplicarTraduccionesDOM();
     actualizarCarritoUI();
+    actualizarLinkWhatsApp(); // Actualiza el botón flotante
     if (document.getElementById('catalogo')) cargarCatalogo();
 }
 
@@ -41,7 +43,7 @@ function inyectarBotonMoneda() {
     if (!header || document.getElementById('btn-moneda')) return;
     const div = document.createElement('div');
     div.style.marginLeft = 'auto'; div.style.marginRight = '20px';
-    div.innerHTML = `<button id="btn-moneda" onclick="cambiarMoneda()" style="background:#f3f4f6; border:1px solid #d1d5db; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:600; color:#374151; font-size:1.05rem; transition:0.3s; font-family:'Inter', sans-serif;">${monedaActual === 'UYU' ? '🇺🇾 UYU' : '🇧🇷 BRL'}</button>`;
+    div.innerHTML = `<button id="btn-moneda" onclick="cambiarMoneda()" style="background:var(--card-bg); border:1px solid var(--border); padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:600; color:var(--text); font-size:1.05rem; transition:0.3s; font-family:'Inter', sans-serif;">${monedaActual === 'UYU' ? '🇺🇾 UYU' : '🇧🇷 BRL'}</button>`;
     header.insertBefore(div, header.querySelector('.cart-icon'));
 }
 
@@ -70,6 +72,14 @@ function getWaLink(texto) {
     return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 }
 
+function actualizarLinkWhatsApp() {
+    const waFloat = document.getElementById('wa-float');
+    if (waFloat) {
+        const numero = monedaActual === 'BRL' ? WA_BR : WA_UY;
+        waFloat.href = `https://wa.me/${numero}`;
+    }
+}
+
 // --- CARRITO ---
 function guardarCarrito() { localStorage.setItem('jarts_carrito', JSON.stringify(carrito)); actualizarCarritoUI(); }
 function agregarAlCarrito(id, title, unit_price) {
@@ -84,19 +94,19 @@ function actualizarCarritoUI() {
     if (!div) return; 
 
     if (carrito.length === 0) {
-        div.innerHTML = `<p style="text-align:center; color:#6b7280; margin:30px 0;">${textos[idioma].vacio}</p>`;
+        div.innerHTML = `<p style="text-align:center; color:var(--text-muted); margin:30px 0;">${textos[idioma].vacio}</p>`;
         document.getElementById('btn-ir-pagar').style.display = 'none';
     } else {
         document.getElementById('btn-ir-pagar').style.display = 'block';
         div.innerHTML = carrito.map((item, idx) => `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #e5e7eb; padding-bottom:12px;">
-                <div style="flex:1;"><strong style="font-size:0.95rem; color:#1f2937;">${item.title}</strong><br><small style="color:#6b7280;">${formatPrecio(item.unit_price)} c/u</small></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                <div style="flex:1;"><strong style="font-size:0.95rem; color:var(--text);">${item.title}</strong><br><small style="color:var(--text-muted);">${formatPrecio(item.unit_price)} c/u</small></div>
                 <div style="display:flex; align-items:center; gap:8px; margin:0 10px;">
-                    <button onclick="restarItem(${idx})" style="background:#f3f4f6; border:1px solid #d1d5db; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:bold; color:#374151;">-</button>
-                    <span style="font-weight:600; min-width:20px; text-align:center; color:#1f2937;">${item.quantity}</span>
-                    <button onclick="sumarItem(${idx})" style="background:#1f2937; color:white; border:none; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:bold;">+</button>
+                    <button onclick="restarItem(${idx})" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:bold; color:var(--text);">-</button>
+                    <span style="font-weight:600; min-width:20px; text-align:center; color:var(--text);">${item.quantity}</span>
+                    <button onclick="sumarItem(${idx})" style="background:var(--accent); color:white; border:none; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:bold;">+</button>
                 </div>
-                <div style="text-align:right;"><strong style="display:block; color:#1f2937;">${formatPrecio(item.unit_price * item.quantity)}</strong><small onclick="eliminarItem(${idx})" style="color:#ef4444; cursor:pointer; text-decoration:underline; font-size:0.8rem; font-weight:600;">${textos[idioma].quitar}</small></div>
+                <div style="text-align:right;"><strong style="display:block; color:var(--text);">${formatPrecio(item.unit_price * item.quantity)}</strong><small onclick="eliminarItem(${idx})" style="color:#ef4444; cursor:pointer; text-decoration:underline; font-size:0.8rem; font-weight:600;">${textos[idioma].quitar}</small></div>
             </div>
         `).join('');
     }
@@ -135,7 +145,7 @@ async function renderizarProductos(categoria) {
     const grid = document.getElementById('grid-productos');
     const filtrados = categoria === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoria);
 
-    if (filtrados.length === 0) { grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:#6b7280; font-size:1.1rem; padding: 30px;">${textos[idioma].sinProd}</p>`; return; }
+    if (filtrados.length === 0) { grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:var(--text-muted); font-size:1.1rem; padding: 30px;">${textos[idioma].sinProd}</p>`; return; }
 
     for (const p of filtrados) {
         const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
@@ -146,7 +156,7 @@ async function renderizarProductos(categoria) {
             const prom = (resenas.reduce((a, b) => a + b.estrellas, 0) / resenas.length).toFixed(1);
             pText = `⭐ ${prom} (${resenas.length})`;
             const msg = resenas[0].comentario.substring(0, 50) + (resenas[0].comentario.length > 50 ? '...' : '');
-            tHTML = `<span class="stars-tooltip">"${msg}"<br><small style="color:#9ca3af;">- ${resenas[0].nombre}</small></span>`;
+            tHTML = `<span class="stars-tooltip">"${msg}"<br><small style="color:var(--text-muted);">- ${resenas[0].nombre}</small></span>`;
         } else {
             pText = `⭐ ${textos[idioma].nuevo}`; tHTML = `<span class="stars-tooltip">${textos[idioma].sePrimero}</span>`;
         }
@@ -162,8 +172,8 @@ async function renderizarProductos(categoria) {
                     <h3>${p.nombre}</h3>
                 </a>
                 <div class="stars-container" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">${pText}${tHTML}</div>
-                <p style="color:#6b7280; font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
-                <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:#1f2937;">${formatPrecio(p.precio)}</p>
+                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
+                <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     <button class="btn-add" onclick="agregarAlCarrito(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})" style="margin:0;">${textos[idioma].agregar}</button>
                     <a href="${linkWA}" target="_blank" class="btn-add" style="margin:0; background:#25d366; color:white; text-decoration:none; display:flex; justify-content:center; align-items:center; gap:8px;"><i class="fab fa-whatsapp" style="font-size:1.1rem;"></i> ${idioma === 'pt' ? 'Compartilhar' : 'Compartir'}</a>
@@ -185,10 +195,10 @@ async function cargarResenas(id) {
     const res = await fetch(`/api/perfumes/${id}/resenas`);
     const resenas = await res.json();
     const div = document.getElementById('lista-resenas');
-    div.innerHTML = resenas.length === 0 ? `<p style="color:#6b7280; text-align:center;">${textos[idioma].sePrimero}</p>` : resenas.map(r => `
-        <div style="border-bottom:1px solid #e5e7eb; padding:12px 0;">
-            <strong style="color:#1f2937;">${r.nombre}</strong> <span style="color:#d4af37; font-size:0.9rem;">${'⭐'.repeat(r.estrellas)}</span><br>
-            <small style="color:#4b5563; font-size:0.9rem; display:block; margin-top:4px;">${r.comentario}</small>
+    div.innerHTML = resenas.length === 0 ? `<p style="color:var(--text-muted); text-align:center;">${textos[idioma].sePrimero}</p>` : resenas.map(r => `
+        <div style="border-bottom:1px solid var(--border); padding:12px 0;">
+            <strong style="color:var(--text);">${r.nombre}</strong> <span style="color:var(--gold); font-size:0.9rem;">${'⭐'.repeat(r.estrellas)}</span><br>
+            <small style="color:var(--text-muted); font-size:0.9rem; display:block; margin-top:4px;">${r.comentario}</small>
         </div>
     `).join('');
 }

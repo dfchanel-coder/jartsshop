@@ -1,68 +1,79 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
 :root { 
-    --bg: #f4f6f8; 
-    --text: #1a1a1a; 
-    --accent: #2563eb; /* Azul e-commerce moderno, inspira confianza */
-    --accent-hover: #1d4ed8;
-    --gold: #d4af37; /* Mantenemos el dorado para las estrellas */
-    --light-gray: #e5e7eb; 
-    --card-bg: #ffffff;
+    --bg: #0f172a; /* Fondo oscuro moderno */
+    --card-bg: #1e293b; /* Tarjetas un tono más claro */
+    --text: #f8fafc; /* Texto blanco suave */
+    --text-muted: #94a3b8; /* Texto grisáceo */
+    --accent: #3b82f6; /* Azul vibrante moderno */
+    --accent-hover: #60a5fa;
+    --gold: #fbbf24; /* Dorado para destacar */
+    --border: #334155;
 }
 
-body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding-bottom: 80px; }
+body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding-bottom: 80px; transition: background-color 0.5s ease; }
 
-header { background: var(--card-bg); padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 100; }
+/* Menú Superior Animado y Efecto Vidrio */
+header { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; transition: all 0.3s ease; }
 .logo { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; cursor: pointer; color: var(--text); display: flex; align-items: center; gap: 8px;}
-.logo span { color: var(--accent); }
-.cart-icon { cursor: pointer; position: relative; font-size: 1.3rem; padding: 10px; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.3s;}
-.cart-icon:hover { background: #e5e7eb; }
-#cart-count { background: var(--accent); color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; font-weight: bold; position: absolute; top: -2px; right: -5px; border: 2px solid white; }
+.logo span { color: var(--accent); text-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+.cart-icon { cursor: pointer; position: relative; font-size: 1.3rem; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; border: 1px solid transparent;}
+.cart-icon:hover { background: rgba(255,255,255,0.1); border-color: var(--accent); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); transform: scale(1.05); }
+#cart-count { background: var(--accent); color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; font-weight: bold; position: absolute; top: -5px; right: -5px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
 
 .container { max-width: 1250px; margin: 0 auto; padding: 20px; }
 
-/* --- BANNER --- */
-.banner-container { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 40px; background: #e5e7eb; min-height: 150px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+/* Banner con sombra moderna */
+.banner-container { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 40px; background: var(--card-bg); min-height: 150px; display: flex; align-items: center; justify-content: center; box-shadow: 0 15px 40px rgba(0,0,0,0.4); border: 1px solid var(--border); }
 .banner-container img { width: 100%; max-height: 450px; object-fit: cover; display: block; }
 
-.category-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 2px solid var(--light-gray); color: var(--text); }
-.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; }
-
-.product-card { background: var(--card-bg); border-radius: 16px; padding: 15px; text-align: left; transition: all 0.3s ease; border: 1px solid transparent; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; }
-.product-card:hover { transform: translateY(-5px); box-shadow: 0 12px 35px rgba(0,0,0,0.08); border-color: var(--accent); }
-.product-card img { width: 100%; height: 240px; object-fit: contain; border-radius: 12px; margin-bottom: 15px; background: #f9fafb; padding: 10px; box-sizing: border-box; }
-.product-card h3 { margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; color: #374151; line-height: 1.3; }
-
-.btn-add { background: var(--text); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: auto; font-family: 'Inter', sans-serif;}
-.btn-add:hover { background: var(--accent); }
-
-/* --- TOOLTIP ESTRELLAS --- */
-.stars-container { position: relative; display: inline-block; cursor: pointer; color: var(--gold); font-size: 0.95rem; margin-bottom: 10px; background: #fffbeb; padding: 4px 10px; border-radius: 20px; border: 1px solid #fde68a; width: fit-content;}
-.stars-tooltip { visibility: hidden; width: 220px; background-color: #1f2937; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: absolute; z-index: 10; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 0.85rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2); white-space: normal;}
-.stars-tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #1f2937 transparent transparent transparent; }
-.stars-container:hover .stars-tooltip { visibility: visible; opacity: 1; }
-
-/* Modals & Checkout */
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.7); z-index: 1000; overflow-y: auto; backdrop-filter: blur(4px); }
-.modal-content { background: white; margin: 5% auto; padding: 30px; width: 90%; max-width: 500px; border-radius: 20px; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);}
-.close-modal { position: absolute; top: 15px; right: 20px; font-size: 25px; cursor: pointer; color: #6b7280; }
-.form-input { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; background: #f9fafb; transition: 0.3s; }
-.form-input:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-
-.payment-option { border: 2px solid #e5e7eb; padding: 15px; border-radius: 12px; margin-top: 10px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.3s; background: white;}
-.payment-option.selected { border-color: var(--accent); background: #eff6ff; }
-.payment-option i { font-size: 1.5rem; }
-
-footer { background: white; color: #6b7280; text-align: center; padding: 40px 20px; margin-top: 50px; border-top: 1px solid #e5e7eb; }
-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
-.whatsapp-float { position: fixed; bottom: 25px; right: 25px; background: #25d366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3); transition: transform 0.3s; z-index: 200; }
-.whatsapp-float:hover { transform: scale(1.1); }
-
-/* --- EFECTOS Y FILTROS --- */
-.fade-in { animation: fadeIn 0.5s ease-out forwards; }
-@keyframes fadeIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-
+/* Filtros Animados */
 .filter-container { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
-.filter-btn { background: white; border: 1px solid #d1d5db; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-size: 0.95rem; font-weight: 600; color: #4b5563; transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
-.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-.filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);}
+.filter-btn { background: var(--card-bg); border: 1px solid var(--border); padding: 10px 22px; border-radius: 30px; cursor: pointer; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.filter-btn:hover { border-color: var(--accent); color: var(--text); transform: translateY(-3px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.2); }
+.filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); transform: translateY(-3px); }
+
+/* Tarjetas de Producto Dark */
+.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; }
+.product-card { background: var(--card-bg); border-radius: 16px; padding: 18px; text-align: left; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border); box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.product-card::before { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.03), transparent); transform: skewX(-20deg); transition: 0.7s; }
+.product-card:hover::before { left: 150%; }
+.product-card:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 15px rgba(59, 130, 246, 0.15); }
+.product-card img { width: 100%; height: 240px; object-fit: contain; border-radius: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.02); padding: 10px; box-sizing: border-box; }
+.product-card h3 { margin: 0 0 8px 0; font-size: 1.15rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+
+.btn-add { background: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: auto; font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; }
+.btn-add:hover { background: var(--accent-hover); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transform: scale(1.02); }
+
+/* Tooltips */
+.stars-container { position: relative; display: inline-block; cursor: pointer; color: var(--gold); font-size: 0.95rem; margin-bottom: 10px; background: rgba(251, 191, 36, 0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(251, 191, 36, 0.3); transition: 0.3s; }
+.stars-container:hover { background: rgba(251, 191, 36, 0.2); }
+.stars-tooltip { visibility: hidden; width: 220px; background-color: #0f172a; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: absolute; z-index: 10; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: all 0.3s ease; font-size: 0.85rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+.stars-container:hover .stars-tooltip { visibility: visible; opacity: 1; bottom: 140%; }
+
+/* Modales Oscuros */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000; overflow-y: auto; backdrop-filter: blur(8px); }
+.modal-content { background: var(--card-bg); margin: 5% auto; padding: 30px; width: 90%; max-width: 500px; border-radius: 20px; position: relative; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); border: 1px solid var(--border); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.close-modal { position: absolute; top: 15px; right: 20px; font-size: 25px; cursor: pointer; color: var(--text-muted); transition: 0.3s; }
+.close-modal:hover { color: var(--text); transform: rotate(90deg); }
+
+.form-input { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; background: rgba(0,0,0,0.2); color: var(--text); transition: all 0.3s ease; }
+.form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); background: rgba(0,0,0,0.4); }
+
+/* Checkouts & FAQ */
+.faq-item { background: var(--card-bg); padding: 18px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px; cursor: pointer; transition: 0.3s; }
+.faq-item:hover { border-color: var(--text-muted); }
+.payment-option { border: 2px solid var(--border); padding: 15px; border-radius: 12px; margin-top: 10px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.3s; background: rgba(0,0,0,0.2); color: var(--text); }
+.payment-option.selected { border-color: var(--accent); background: rgba(59, 130, 246, 0.1); box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.1); }
+
+footer { background: var(--card-bg); color: var(--text-muted); text-align: center; padding: 40px 20px; margin-top: 50px; border-top: 1px solid var(--border); }
+footer a { color: var(--accent); text-decoration: none; font-weight: 600; transition: 0.3s; }
+footer a:hover { text-shadow: 0 0 8px rgba(59,130,246,0.5); }
+
+.whatsapp-float { position: fixed; bottom: 25px; right: 25px; background: #25d366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200; border: 2px solid transparent; }
+.whatsapp-float:hover { transform: scale(1.15) rotate(-5deg); box-shadow: 0 15px 35px rgba(37, 211, 102, 0.4); border-color: white; }
+
+/* --- EFECTOS DE DESVANECER Y TRANSICIONES --- */
+.fade-in { animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
+@keyframes fadeIn { 0% { opacity: 0; transform: translateY(20px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
