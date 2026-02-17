@@ -2,6 +2,7 @@ let carrito = JSON.parse(localStorage.getItem('jarts_carrito')) || [];
 let todosLosProductos = []; 
 let categoriaActual = 'Todas';
 
+// --- MULTIMONEDA E IDIOMA ---
 let cotizacionBRL = 8.50; 
 let monedaActual = localStorage.getItem('jarts_moneda') || 'UYU';
 let idioma = monedaActual === 'BRL' ? 'pt' : 'es';
@@ -112,48 +113,79 @@ function renderizarFiltros() {
 }
 function filtrarPor(cat) { categoriaActual = cat; renderizarFiltros(); renderizarProductos(cat); }
 
-async function renderizarProductos(categoria) {
+// --- NUEVA LÓGICA DE AGRUPACIÓN (ESTILO DULCE MIMOS) ---
+async function renderizarProductos(categoriaSeleccionada) {
     const container = document.getElementById('catalogo');
-    container.innerHTML = '<div class="products-grid fade-in" id="grid-productos"></div>';
-    const grid = document.getElementById('grid-productos');
-    const filtrados = categoria === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoria);
+    container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
+    const mainContainer = document.getElementById('grid-container-main');
 
-    if (filtrados.length === 0) { grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:var(--text-muted); font-size:1.1rem; padding: 30px;">${textos[idioma].sinProd}</p>`; return; }
-
-    for (const p of filtrados) {
-        const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
-        const resenas = await resenasReq.json();
-        let pText = '', tHTML = '';
-        if (resenas.length > 0) {
-            const prom = (resenas.reduce((a, b) => a + b.estrellas, 0) / resenas.length).toFixed(1);
-            pText = `⭐ ${prom} (${resenas.length})`;
-            const msg = resenas[0].comentario.substring(0, 50) + (resenas[0].comentario.length > 50 ? '...' : '');
-            tHTML = `<span class="stars-tooltip">"${msg}"<br><small style="color:var(--text-muted);">- ${resenas[0].nombre}</small></span>`;
-        } else {
-            pText = `⭐ ${textos[idioma].nuevo}`; tHTML = `<span class="stars-tooltip">${textos[idioma].sePrimero}</span>`;
-        }
-
-        const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
-        const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${linkProd}` : `¡Mirá este producto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${linkProd}`;
-        const linkWA = getWaLink(msgWaText);
-
-        // BOTÓN COMPARTIR CHICO Y LÓGICA DE STOCK
-        grid.innerHTML += `
-            <div class="product-card ${!p.activo ? 'agotado' : ''}">
-                <a href="/producto.html?id=${p.id}" style="text-decoration:none; color:inherit; display:block; position:relative;">
-                    ${!p.activo ? `<div style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:0.8rem; z-index:2;">${textos[idioma].agotado}</div>` : ''}
-                    <img src="${p.imagen_url}" alt="${p.nombre}" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
-                    <h3>${p.nombre}</h3>
-                </a>
-                <div class="stars-container" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">${pText}${tHTML}</div>
-                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
-                <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
-                <div style="display:flex; gap:10px; margin-top:auto;">
-                    <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
-                    <a href="${linkWA}" target="_blank" class="btn-share" style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:var(--text); width:44px; height:44px; border-radius:8px; display:flex; justify-content:center; align-items:center; text-decoration:none; transition:0.3s;" title="Compartir" onmouseover="this.style.background='#25d366'; this.style.color='white'; this.style.borderColor='#25d366';" onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.color='var(--text)'; this.style.borderColor='var(--border)';"><i class="fas fa-share-nodes"></i></a>
-                </div>
-            </div>`;
+    // Comprobamos si no hay nada para mostrar
+    if (todosLosProductos.length === 0 || (categoriaSeleccionada !== 'Todas' && !todosLosProductos.some(p => p.categoria === categoriaSeleccionada))) { 
+        mainContainer.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-size:1.1rem; padding: 30px;">${textos[idioma].sinProd}</p>`; 
+        return; 
     }
+
+    // Definimos qué categorías vamos a dibujar
+    const categoriasARenderizar = categoriaSeleccionada === 'Todas' 
+        ? [...new Set(todosLosProductos.map(p => p.categoria))] // Todas las únicas
+        : [categoriaSeleccionada]; // Solo la seleccionada
+
+    let htmlAcumulado = '';
+
+    for (const cat of categoriasARenderizar) {
+        const productosDeCategoria = todosLosProductos.filter(p => p.categoria === cat);
+        
+        if (productosDeCategoria.length > 0) {
+            // Si estamos viendo "Todas", dibujamos el título de cada bloque
+            if (categoriaSeleccionada === 'Todas') {
+                htmlAcumulado += `
+                    <h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">
+                        ${cat}
+                    </h2>`;
+            }
+            
+            htmlAcumulado += `<div class="products-grid">`;
+            
+            // Renderizamos los productos de esta categoría
+            for (const p of productosDeCategoria) {
+                const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
+                const resenas = await resenasReq.json();
+                
+                let pText = '', tHTML = '';
+                if (resenas.length > 0) {
+                    const prom = (resenas.reduce((a, b) => a + b.estrellas, 0) / resenas.length).toFixed(1);
+                    pText = `⭐ ${prom} (${resenas.length})`;
+                    const msg = resenas[0].comentario.substring(0, 50) + (resenas[0].comentario.length > 50 ? '...' : '');
+                    tHTML = `<span class="stars-tooltip">"${msg}"<br><small style="color:var(--text-muted);">- ${resenas[0].nombre}</small></span>`;
+                } else {
+                    pText = `⭐ ${textos[idioma].nuevo}`; tHTML = `<span class="stars-tooltip">${textos[idioma].sePrimero}</span>`;
+                }
+
+                const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
+                const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${linkProd}` : `¡Mirá este producto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${linkProd}`;
+                const linkWA = getWaLink(msgWaText);
+
+                htmlAcumulado += `
+                    <div class="product-card ${!p.activo ? 'agotado' : ''}">
+                        <a href="/producto.html?id=${p.id}" style="text-decoration:none; color:inherit; display:block; position:relative;">
+                            ${!p.activo ? `<div style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:0.8rem; z-index:2;">${textos[idioma].agotado}</div>` : ''}
+                            <img src="${p.imagen_url}" alt="${p.nombre}" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
+                            <h3>${p.nombre}</h3>
+                        </a>
+                        <div class="stars-container" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">${pText}${tHTML}</div>
+                        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
+                        <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
+                        <div style="display:flex; gap:10px; margin-top:auto;">
+                            <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
+                            <a href="${linkWA}" target="_blank" class="btn-share" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); width:44px; height:44px; border-radius:8px; display:flex; justify-content:center; align-items:center; text-decoration:none; transition:0.3s;" title="Compartir" onmouseover="this.style.background='#25d366'; this.style.color='white'; this.style.borderColor='#25d366';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text)'; this.style.borderColor='var(--border)';"><i class="fas fa-share-nodes"></i></a>
+                        </div>
+                    </div>`;
+            }
+            htmlAcumulado += `</div>`;
+        }
+    }
+    
+    mainContainer.innerHTML = htmlAcumulado;
 }
 
 // --- PÁGINA DE PRODUCTO INDIVIDUAL ---
@@ -182,7 +214,7 @@ async function cargarProductoIndividual() {
         document.getElementById('p-btn-add').onclick = () => agregarAlCarrito(p.id, p.nombre, p.precio);
     }
 
-    const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${window.location.href}` : `¡Mirá este producto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${window.location.href}`;
+    const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${window.location.href}` : `¡Mirá este produto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${window.location.href}`;
     document.getElementById('p-btn-wa').href = getWaLink(msgWaText);
     
     cargarResenasProducto(id);
