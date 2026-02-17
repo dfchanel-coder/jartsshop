@@ -1,3 +1,11 @@
+// Borramos el carrito viejo si existe para evitar conflictos con la nueva estructura
+if (localStorage.getItem('jarts_carrito')) {
+    const tempCart = JSON.parse(localStorage.getItem('jarts_carrito'));
+    if (tempCart.length > 0 && !tempCart[0].categoria) {
+        localStorage.removeItem('jarts_carrito'); // Limpiamos si es formato viejo
+    }
+}
+
 let carrito = JSON.parse(localStorage.getItem('jarts_carrito')) || [];
 let todosLosProductos = []; 
 let categoriaActual = 'Todas';
@@ -10,9 +18,10 @@ let idioma = monedaActual === 'BRL' ? 'pt' : 'es';
 const WA_UY = '59899822758';
 const WA_BR = '5555996679276';
 
+// NUEVO: Agregamos el texto del límite
 const textos = {
-    es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría.", agotado: "Sin Stock", agregado: "¡Agregado al carrito!", sinBusqueda: "No se encontraron resultados." },
-    pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria.", agotado: "Esgotado", agregado: "Adicionado ao carrinho!", sinBusqueda: "Nenhum resultado encontrado." }
+    es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría.", agotado: "Sin Stock", agregado: "¡Agregado al carrito!", sinBusqueda: "No se encontraron resultados.", limitePerfumes: "Límite máximo: 2 perfumes por pedido." },
+    pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria.", agotado: "Esgotado", agregado: "Adicionado ao carrinho!", sinBusqueda: "Nenhum resultado encontrado.", limitePerfumes: "Limite máximo: 2 perfumes por pedido." }
 };
 
 async function initConfig() {
@@ -42,7 +51,6 @@ async function initConfig() {
 
 function inyectarBotonMoneda() {
     if (document.getElementById('btn-moneda')) return;
-    
     const div = document.createElement('div');
     div.innerHTML = `<button id="btn-moneda" onclick="cambiarMoneda()" style="background:var(--card-bg); border:1px solid var(--border); padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:600; color:var(--text); font-size:1.05rem; transition:0.3s; font-family:'Inter', sans-serif;">${monedaActual === 'UYU' ? '🇺🇾 UYU' : '🇧🇷 BRL'}</button>`;
     
@@ -87,41 +95,37 @@ function showToast(mensaje, tipo = 'success') {
     toast.className = `toast ${tipo}`;
     toast.innerHTML = tipo === 'success' ? `<i class="fa fa-check-circle" style="font-size:1.2rem; color:#10b981;"></i> ${mensaje}` : `<i class="fa fa-exclamation-circle" style="font-size:1.2rem; color:#ef4444;"></i> ${mensaje}`;
     container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 400); 
-    }, 3000);
+    setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }, 3000);
 }
 
-// --- NUEVO: SISTEMA NATIVO DE COMPARTIR (WEB SHARE API) ---
 async function compartirProducto(titulo, texto, url) {
     if (navigator.share) {
-        try {
-            await navigator.share({
-                title: titulo,
-                text: texto,
-                url: url
-            });
-        } catch (err) {
-            console.log('Interacción de compartir cancelada o error', err);
-        }
+        try { await navigator.share({ title: titulo, text: texto, url: url }); } catch (err) {}
     } else {
-        // Fallback: Si la PC o celular es viejo y no tiene el menú nativo, le copia el link
-        navigator.clipboard.writeText(texto + " " + url).then(() => {
-            showToast(idioma === 'pt' ? 'Link copiado!' : '¡Enlace copiado!', 'success');
-        });
+        navigator.clipboard.writeText(texto + " " + url).then(() => { showToast(idioma === 'pt' ? 'Link copiado!' : '¡Enlace copiado!', 'success'); });
     }
 }
 
-// --- CARRITO ---
+// --- CARRITO INTELIGENTE ---
 function guardarCarrito() { localStorage.setItem('jarts_carrito', JSON.stringify(carrito)); actualizarCarritoUI(); }
-function agregarAlCarrito(id, title, unit_price) {
+
+// NUEVO: Ahora recibe la categoría y aplica el límite
+function agregarAlCarrito(id, title, unit_price, categoria) {
+    // Regla de Negocio: Máximo 2 perfumes en total por pedido
+    if (categoria === 'Perfumes') {
+        const cantidadDePerfumesEnCarrito = carrito.filter(item => item.categoria === 'Perfumes').reduce((suma, item) => suma + item.quantity, 0);
+        if (cantidadDePerfumesEnCarrito >= 2) {
+            showToast(textos[idioma].limitePerfumes, 'error');
+            return; // Corta la ejecución, no lo agrega
+        }
+    }
+
     const existe = carrito.find(i => i.id === id);
-    if (existe) existe.quantity++; else carrito.push({ id, title, unit_price, quantity: 1 });
+    if (existe) existe.quantity++; else carrito.push({ id, title, unit_price, quantity: 1, categoria: categoria });
     guardarCarrito(); 
     showToast(textos[idioma].agregado, 'success');
 }
+
 function actualizarCarritoUI() {
     const countEl = document.getElementById('cart-count');
     if (countEl) {
@@ -153,7 +157,20 @@ function actualizarCarritoUI() {
     const totalEl = document.getElementById('cart-total');
     if (totalEl) totalEl.innerText = formatPrecio(carrito.reduce((a, b) => a + (b.unit_price * b.quantity), 0));
 }
-function sumarItem(index) { carrito[index].quantity++; guardarCarrito(); }
+
+// NUEVO: El botón de sumar también respeta el límite
+function sumarItem(index) { 
+    if (carrito[index].categoria === 'Perfumes') {
+        const cantidadDePerfumesEnCarrito = carrito.filter(item => item.categoria === 'Perfumes').reduce((suma, item) => suma + item.quantity, 0);
+        if (cantidadDePerfumesEnCarrito >= 2) {
+            showToast(textos[idioma].limitePerfumes, 'error');
+            return;
+        }
+    }
+    carrito[index].quantity++; 
+    guardarCarrito(); 
+}
+
 function restarItem(index) { if (carrito[index].quantity > 1) carrito[index].quantity--; else { carrito.splice(index, 1); } guardarCarrito(); }
 function eliminarItem(idx) { carrito.splice(idx, 1); guardarCarrito(); }
 function vaciarCarrito() { carrito = []; guardarCarrito(); }
@@ -204,23 +221,18 @@ function renderizarFiltros() {
             html += '</div>';
         }
     }
-
     container.innerHTML = html;
 }
 
 function filtrarPor(cat) { 
-    categoriaActual = cat; 
-    subcategoriaActual = 'Todas'; 
+    categoriaActual = cat; subcategoriaActual = 'Todas'; 
     document.getElementById('buscador-productos').value = ''; 
-    renderizarFiltros(); 
-    renderizarProductos(cat, subcategoriaActual); 
+    renderizarFiltros(); renderizarProductos(cat, subcategoriaActual); 
 }
 
 function filtrarPorSub(subcat) {
-    subcategoriaActual = subcat;
-    document.getElementById('buscador-productos').value = ''; 
-    renderizarFiltros(); 
-    renderizarProductos(categoriaActual, subcat);
+    subcategoriaActual = subcat; document.getElementById('buscador-productos').value = ''; 
+    renderizarFiltros(); renderizarProductos(categoriaActual, subcat);
 }
 
 async function renderizarProductos(categoriaSeleccionada, subcategoriaSeleccionada = 'Todas', searchQuery = '') {
@@ -233,9 +245,7 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
         filtrados = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(searchQuery) || (p.descripcion && p.descripcion.toLowerCase().includes(searchQuery)));
     } else {
         let base = categoriaSeleccionada === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaSeleccionada);
-        if (subcategoriaSeleccionada !== 'Todas') {
-            base = base.filter(p => p.subcategoria === subcategoriaSeleccionada);
-        }
+        if (subcategoriaSeleccionada !== 'Todas') base = base.filter(p => p.subcategoria === subcategoriaSeleccionada);
         filtrados = base;
     }
 
@@ -254,17 +264,13 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
         htmlAcumulado += `</div>`;
     } else {
         const categoriasARenderizar = categoriaSeleccionada === 'Todas' ? [...new Set(filtrados.map(p => p.categoria))] : [categoriaSeleccionada]; 
-        
         for (const cat of categoriasARenderizar) {
             const productosDeCategoria = filtrados.filter(p => p.categoria === cat);
-            
             if (productosDeCategoria.length > 0) {
                 if (categoriaSeleccionada === 'Todas') {
                     htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
                 }
-
                 const subcategoriasARenderizar = subcategoriaSeleccionada === 'Todas' ? [...new Set(productosDeCategoria.map(p => p.subcategoria || ''))] : [subcategoriaSeleccionada];
-                
                 for (const sub of subcategoriasARenderizar) {
                     const prodSub = productosDeCategoria.filter(p => (p.subcategoria || '') === sub);
                     if (prodSub.length > 0) {
@@ -301,14 +307,15 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
     });
 }
 
+// NUEVO: Pasamos p.categoria a la función onclick
 function generarTarjetasHTML(arrayDeProductos) {
     let html = '';
     for (const p of arrayDeProductos) {
         const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
-        // Armamos el texto limpio a compartir
         const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este producto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
         const safeShareText = shareText.replace(/'/g, "\\'");
         const safeNombre = p.nombre.replace(/'/g, "\\'");
+        const safeCat = p.categoria.replace(/'/g, "\\'");
 
         html += `
             <div class="product-card ${!p.activo ? 'agotado' : ''}">
@@ -323,8 +330,7 @@ function generarTarjetasHTML(arrayDeProductos) {
                 <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
                 <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
                 <div style="display:flex; gap:10px; margin-top:auto;">
-                    <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${safeNombre}', ${p.precio})"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
-                    
+                    <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${safeNombre}', ${p.precio}, '${safeCat}')"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
                     <button onclick="compartirProducto('${safeNombre}', '${safeShareText}', '${linkProd}')" class="btn-share" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); width:44px; height:44px; border-radius:8px; display:flex; justify-content:center; align-items:center; cursor:pointer; transition:0.3s;" title="Compartir" onmouseover="this.style.background='#25d366'; this.style.color='white'; this.style.borderColor='#25d366';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text)'; this.style.borderColor='var(--border)';"><i class="fas fa-share-nodes"></i></button>
                 </div>
             </div>`;
@@ -332,7 +338,6 @@ function generarTarjetasHTML(arrayDeProductos) {
     return html;
 }
 
-// --- PÁGINA DE PRODUCTO INDIVIDUAL ---
 async function cargarProductoIndividual() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
@@ -355,21 +360,16 @@ async function cargarProductoIndividual() {
         btn.style.cursor = 'not-allowed';
     } else {
         document.getElementById('p-btn-add').innerText = textos[idioma].agregar;
-        document.getElementById('p-btn-add').onclick = () => agregarAlCarrito(p.id, p.nombre, p.precio);
+        // NUEVO: Pasa la categoría
+        document.getElementById('p-btn-add').onclick = () => agregarAlCarrito(p.id, p.nombre, p.precio, p.categoria);
     }
 
-    // ACTUALIZACIÓN DEL BOTÓN DE COMPARTIR INTERNO
     const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este producto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
     const shareUrl = window.location.href;
     const btnShare = document.getElementById('p-btn-wa');
     if (btnShare) {
-        btnShare.removeAttribute('href');
-        btnShare.removeAttribute('target');
-        btnShare.style.cursor = 'pointer';
-        btnShare.onclick = (e) => {
-            e.preventDefault();
-            compartirProducto(p.nombre, shareText, shareUrl);
-        };
+        btnShare.removeAttribute('href'); btnShare.removeAttribute('target'); btnShare.style.cursor = 'pointer';
+        btnShare.onclick = (e) => { e.preventDefault(); compartirProducto(p.nombre, shareText, shareUrl); };
     }
     
     cargarResenasProducto(id);
@@ -379,15 +379,9 @@ async function cargarResenasProducto(id) {
     const res = await fetch(`/api/perfumes/${id}/resenas`);
     const resenas = await res.json();
     const div = document.getElementById('lista-resenas-prod');
-    div.innerHTML = resenas.length === 0 ? `<p style="color:var(--text-muted);">${textos[idioma].sePrimero}</p>` : resenas.map(r => `
-        <div style="border-bottom:1px solid var(--border); padding:15px 0;">
-            <strong style="color:var(--text);">${r.nombre}</strong> <span style="color:var(--gold); font-size:0.9rem;">${'⭐'.repeat(r.estrellas)}</span><br>
-            <p style="color:var(--text-muted); font-size:0.95rem; margin-top:8px;">${r.comentario}</p>
-        </div>
-    `).join('');
+    div.innerHTML = resenas.length === 0 ? `<p style="color:var(--text-muted);">${textos[idioma].sePrimero}</p>` : resenas.map(r => `<div style="border-bottom:1px solid var(--border); padding:15px 0;"><strong style="color:var(--text);">${r.nombre}</strong> <span style="color:var(--gold); font-size:0.9rem;">${'⭐'.repeat(r.estrellas)}</span><br><p style="color:var(--text-muted); font-size:0.95rem; margin-top:8px;">${r.comentario}</p></div>`).join('');
 }
 
-// --- RESEÑAS MODAL ---
 async function abrirResenas(id, nombre) { const modal = document.getElementById('modal-resenas'); if(!modal) return; document.getElementById('r-perfume-id').value = id; document.getElementById('resena-titulo').innerText = idioma==='pt'?`Avaliações: ${nombre}`:`Opiniones: ${nombre}`; modal.style.display = 'block'; cargarResenas(id); }
 function cerrarResenas() { document.getElementById('modal-resenas').style.display = 'none'; }
 async function cargarResenas(id) { const res = await fetch(`/api/perfumes/${id}/resenas`); const resenas = await res.json(); const div = document.getElementById('lista-resenas'); div.innerHTML = resenas.length === 0 ? `<p style="color:var(--text-muted); text-align:center;">${textos[idioma].sePrimero}</p>` : resenas.map(r => `<div style="border-bottom:1px solid var(--border); padding:12px 0;"><strong style="color:var(--text);">${r.nombre}</strong> <span style="color:var(--gold); font-size:0.9rem;">${'⭐'.repeat(r.estrellas)}</span><br><small style="color:var(--text-muted); font-size:0.9rem; display:block; margin-top:4px;">${r.comentario}</small></div>`).join(''); }
