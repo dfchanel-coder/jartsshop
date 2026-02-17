@@ -10,8 +10,8 @@ const WA_UY = '59899822758';
 const WA_BR = '5555996679276';
 
 const textos = {
-    es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría.", agotado: "Sin Stock" },
-    pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria.", agotado: "Esgotado" }
+    es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría.", agotado: "Sin Stock", agregado: "¡Agregado al carrito!", sinBusqueda: "No se encontraron resultados." },
+    pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria.", agotado: "Esgotado", agregado: "Adicionado ao carrinho!", sinBusqueda: "Nenhum resultado encontrado." }
 };
 
 async function initConfig() {
@@ -31,7 +31,11 @@ async function initConfig() {
     aplicarTraduccionesDOM();
     actualizarCarritoUI();
     actualizarLinkWhatsApp(); 
-    if (document.getElementById('catalogo')) cargarCatalogo();
+    
+    if (document.getElementById('catalogo')) {
+        cargarCatalogo();
+        configurarBuscador(); // Iniciamos el motor de búsqueda
+    }
     if (document.getElementById('producto-detalle')) cargarProductoIndividual();
 }
 
@@ -50,21 +54,55 @@ function cambiarMoneda() {
     location.reload(); 
 }
 
-function aplicarTraduccionesDOM() { document.querySelectorAll('[data-es]').forEach(el => el.innerText = el.getAttribute(`data-${idioma}`)); }
+function aplicarTraduccionesDOM() { 
+    document.querySelectorAll('[data-es]').forEach(el => {
+        // Soporte para placeholders (Buscador) y textos normales
+        if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = el.getAttribute(`data-${idioma}`);
+        } else {
+            el.innerText = el.getAttribute(`data-${idioma}`);
+        }
+    }); 
+}
+
 function formatPrecio(precioBaseUYU) { return monedaActual === 'BRL' ? `R$ ${(precioBaseUYU / cotizacionBRL).toFixed(2)}` : `$ ${precioBaseUYU}`; }
 function getWaLink(texto) { return `https://wa.me/${monedaActual === 'BRL' ? WA_BR : WA_UY}?text=${encodeURIComponent(texto)}`; }
 function actualizarLinkWhatsApp() { const waFloat = document.getElementById('wa-float'); if (waFloat) waFloat.href = `https://wa.me/${monedaActual === 'BRL' ? WA_BR : WA_UY}`; }
+
+// --- NUEVO: SISTEMA DE TOAST NOTIFICATIONS ---
+function showToast(mensaje, tipo = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${tipo}`;
+    toast.innerHTML = tipo === 'success' ? `<i class="fa fa-check-circle" style="font-size:1.2rem;"></i> ${mensaje}` : `<i class="fa fa-exclamation-circle" style="font-size:1.2rem;"></i> ${mensaje}`;
+    container.appendChild(toast);
+    
+    // Desaparece a los 3 segundos
+    setTimeout(() => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 400); // Espera que termine la animación css
+    }, 3000);
+}
 
 // --- CARRITO ---
 function guardarCarrito() { localStorage.setItem('jarts_carrito', JSON.stringify(carrito)); actualizarCarritoUI(); }
 function agregarAlCarrito(id, title, unit_price) {
     const existe = carrito.find(i => i.id === id);
     if (existe) existe.quantity++; else carrito.push({ id, title, unit_price, quantity: 1 });
-    guardarCarrito(); toggleCart();
+    guardarCarrito(); 
+    // Ya no abrimos el carrito abruptamente, mostramos el Toast
+    showToast(textos[idioma].agregado, 'success');
 }
 function actualizarCarritoUI() {
     const countEl = document.getElementById('cart-count');
-    if (countEl) countEl.innerText = carrito.reduce((a, b) => a + b.quantity, 0);
+    if (countEl) {
+        const totalItems = carrito.reduce((a, b) => a + b.quantity, 0);
+        countEl.innerText = totalItems;
+        // Animación de latido al actualizar
+        countEl.style.transform = 'scale(1.3)';
+        setTimeout(() => countEl.style.transform = 'scale(1)', 200);
+    }
     const div = document.getElementById('cart-items');
     if (!div) return; 
 
@@ -95,6 +133,17 @@ function vaciarCarrito() { carrito = []; guardarCarrito(); }
 function toggleCart() { const modal = document.getElementById('cart-modal'); if (modal) modal.style.display = modal.style.display === 'block' ? 'none' : 'block'; }
 function irAlCheckout() { window.location.href = '/checkout.html'; }
 
+// --- NUEVO: MOTOR DE BÚSQUEDA ---
+function configurarBuscador() {
+    const inputBuscador = document.getElementById('buscador-productos');
+    if (!inputBuscador) return;
+
+    inputBuscador.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        renderizarProductos(categoriaActual, query);
+    });
+}
+
 // --- CATÁLOGO ---
 async function cargarCatalogo() {
     if (todosLosProductos.length === 0) {
@@ -111,67 +160,67 @@ function renderizarFiltros() {
     const categorias = ['Todas', ...new Set(todosLosProductos.map(p => p.categoria))];
     container.innerHTML = categorias.map(c => `<button class="filter-btn ${c === categoriaActual ? 'active' : ''}" onclick="filtrarPor('${c}')">${c === 'Todas' ? (idioma === 'pt' ? 'Todas' : 'Todas') : c}</button>`).join('');
 }
-function filtrarPor(cat) { categoriaActual = cat; renderizarFiltros(); renderizarProductos(cat); }
+function filtrarPor(cat) { 
+    categoriaActual = cat; 
+    document.getElementById('buscador-productos').value = ''; // Limpiamos el buscador al tocar un filtro
+    renderizarFiltros(); 
+    renderizarProductos(cat); 
+}
 
-// LÓGICA DE RENDERIZADO TURBO 🚀
-async function renderizarProductos(categoriaSeleccionada) {
+// --- RENDERIZADO TURBO CON SOPORTE PARA BUSCADOR ---
+async function renderizarProductos(categoriaSeleccionada, searchQuery = '') {
     const container = document.getElementById('catalogo');
     container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
     const mainContainer = document.getElementById('grid-container-main');
 
-    if (todosLosProductos.length === 0 || (categoriaSeleccionada !== 'Todas' && !todosLosProductos.some(p => p.categoria === categoriaSeleccionada))) { 
-        mainContainer.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-size:1.1rem; padding: 30px;">${textos[idioma].sinProd}</p>`; 
+    // 1. Filtrar los productos
+    let filtrados = [];
+    if (searchQuery !== '') {
+        // Busca en toda la tienda ignorando la categoría seleccionada
+        filtrados = todosLosProductos.filter(p => 
+            p.nombre.toLowerCase().includes(searchQuery) || 
+            (p.descripcion && p.descripcion.toLowerCase().includes(searchQuery))
+        );
+    } else {
+        // Muestra la categoría normal
+        filtrados = categoriaSeleccionada === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaSeleccionada);
+    }
+
+    if (filtrados.length === 0) { 
+        const msjVacio = searchQuery !== '' ? textos[idioma].sinBusqueda : textos[idioma].sinProd;
+        mainContainer.innerHTML = `<p style="text-align:center; color:var(--text-muted); font-size:1.1rem; padding: 50px;"><i class="fa fa-search" style="font-size:2rem; margin-bottom:15px; display:block; opacity:0.5;"></i>${msjVacio}</p>`; 
         return; 
     }
 
-    const categoriasARenderizar = categoriaSeleccionada === 'Todas' 
-        ? [...new Set(todosLosProductos.map(p => p.categoria))] 
-        : [categoriaSeleccionada]; 
-
-    const filtrados = categoriaSeleccionada === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaSeleccionada);
     let htmlAcumulado = '';
 
-    for (const cat of categoriasARenderizar) {
-        const productosDeCategoria = todosLosProductos.filter(p => p.categoria === cat);
+    // 2. Construir la estructura visual
+    if (searchQuery !== '') {
+        // Si hay búsqueda, mostramos los resultados en un solo bloque
+        const tituloBusqueda = idioma === 'pt' ? 'Resultados da Pesquisa' : 'Resultados de Búsqueda';
+        htmlAcumulado += `<h2 style="margin-top: 20px; margin-bottom: 25px; font-size: 1.5rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 10px;">${tituloBusqueda}</h2><div class="products-grid">`;
+        htmlAcumulado += generarTarjetasHTML(filtrados);
+        htmlAcumulado += `</div>`;
+    } else {
+        // Si NO hay búsqueda, mostramos agrupado por categorías (Modo Pasillo)
+        const categoriasARenderizar = categoriaSeleccionada === 'Todas' ? [...new Set(todosLosProductos.map(p => p.categoria))] : [categoriaSeleccionada]; 
         
-        if (productosDeCategoria.length > 0) {
-            if (categoriaSeleccionada === 'Todas') {
-                htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
+        for (const cat of categoriasARenderizar) {
+            const productosDeCategoria = todosLosProductos.filter(p => p.categoria === cat);
+            if (productosDeCategoria.length > 0) {
+                if (categoriaSeleccionada === 'Todas') {
+                    htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
+                }
+                htmlAcumulado += `<div class="products-grid">`;
+                htmlAcumulado += generarTarjetasHTML(productosDeCategoria);
+                htmlAcumulado += `</div>`;
             }
-            htmlAcumulado += `<div class="products-grid">`;
-            
-            // Dibuja TODA la tarjeta instantáneamente (Nótese el loading="lazy" en la img)
-            for (const p of productosDeCategoria) {
-                const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
-                const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${linkProd}` : `¡Mirá este producto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${linkProd}`;
-                const linkWA = getWaLink(msgWaText);
-
-                htmlAcumulado += `
-                    <div class="product-card ${!p.activo ? 'agotado' : ''}">
-                        <a href="/producto.html?id=${p.id}" style="text-decoration:none; color:inherit; display:block; position:relative;">
-                            ${!p.activo ? `<div style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:0.8rem; z-index:2;">${textos[idioma].agotado}</div>` : ''}
-                            <img src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
-                            <h3>${p.nombre}</h3>
-                        </a>
-                        <div class="stars-container" id="stars-${p.id}" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">
-                            <span style="color:var(--text-muted); font-size:0.8rem;"><i class="fa fa-spinner fa-spin"></i> Cargando...</span>
-                        </div>
-                        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
-                        <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
-                        <div style="display:flex; gap:10px; margin-top:auto;">
-                            <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
-                            <a href="${linkWA}" target="_blank" class="btn-share" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); width:44px; height:44px; border-radius:8px; display:flex; justify-content:center; align-items:center; text-decoration:none; transition:0.3s;" title="Compartir" onmouseover="this.style.background='#25d366'; this.style.color='white'; this.style.borderColor='#25d366';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text)'; this.style.borderColor='var(--border)';"><i class="fas fa-share-nodes"></i></a>
-                        </div>
-                    </div>`;
-            }
-            htmlAcumulado += `</div>`;
         }
     }
     
-    // Inyecta el HTML en la pantalla de golpe
     mainContainer.innerHTML = htmlAcumulado;
 
-    // MAGIA ASÍNCRONA: Descarga las estrellitas de fondo sin congelar la página
+    // 3. Magia Asíncrona (Descarga estrellitas de fondo sin trancar)
     filtrados.forEach(async (p) => {
         try {
             const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
@@ -191,6 +240,35 @@ async function renderizarProductos(categoriaSeleccionada) {
             starBox.innerHTML = pText + tHTML;
         } catch (error) { console.error('Error cargando reseña', error); }
     });
+}
+
+// Helper para no repetir código de HTML
+function generarTarjetasHTML(arrayDeProductos) {
+    let html = '';
+    for (const p of arrayDeProductos) {
+        const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
+        const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${linkProd}` : `¡Mirá este producto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${linkProd}`;
+        const linkWA = getWaLink(msgWaText);
+
+        html += `
+            <div class="product-card ${!p.activo ? 'agotado' : ''}">
+                <a href="/producto.html?id=${p.id}" style="text-decoration:none; color:inherit; display:block; position:relative;">
+                    ${!p.activo ? `<div style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:0.8rem; z-index:2;">${textos[idioma].agotado}</div>` : ''}
+                    <img src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
+                    <h3>${p.nombre}</h3>
+                </a>
+                <div class="stars-container" id="stars-${p.id}" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">
+                    <span style="color:var(--text-muted); font-size:0.8rem;"><i class="fa fa-spinner fa-spin"></i> Cargando...</span>
+                </div>
+                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
+                <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
+                <div style="display:flex; gap:10px; margin-top:auto;">
+                    <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
+                    <a href="${linkWA}" target="_blank" class="btn-share" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); width:44px; height:44px; border-radius:8px; display:flex; justify-content:center; align-items:center; text-decoration:none; transition:0.3s;" title="Compartir" onmouseover="this.style.background='#25d366'; this.style.color='white'; this.style.borderColor='#25d366';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text)'; this.style.borderColor='var(--border)';"><i class="fas fa-share-nodes"></i></a>
+                </div>
+            </div>`;
+    }
+    return html;
 }
 
 // --- PÁGINA DE PRODUCTO INDIVIDUAL ---
