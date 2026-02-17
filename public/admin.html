@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - JART'S SHOP</title>
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=4.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .admin-box { max-width: 1000px; margin: 40px auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 1px solid var(--border); }
@@ -39,15 +39,11 @@
 
         <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border); padding:20px; border-radius:12px; margin-bottom:25px;">
             <h3 style="margin-top:0; color:var(--text); margin-bottom: 15px;"><i class="fa fa-cog" style="color:var(--text-muted);"></i> Configuración de la Tienda</h3>
-            
             <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
                 <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-                    <strong style="color:var(--accent); width: 150px;">Cotización (BRL):</strong>
-                    <span style="font-weight:bold; color:var(--text);">R$ 1 = </span>
-                    <input type="number" id="adm-cotizacion" class="form-input" step="0.10" style="width:120px; margin:0; font-weight:bold; text-align:center;" placeholder="8.50">
-                    <span style="font-weight:bold; color:var(--text);">UYU</span>
+                    <strong style="color:var(--accent); width: 150px;">Cotización (BRL):</strong><span style="font-weight:bold; color:var(--text);">R$ 1 = </span>
+                    <input type="number" id="adm-cotizacion" class="form-input" step="0.10" style="width:120px; margin:0; font-weight:bold; text-align:center;" placeholder="8.50"><span style="font-weight:bold; color:var(--text);">UYU</span>
                 </div>
-                
                 <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
                     <strong style="color:var(--accent); width: 150px;">Banner Principal:</strong>
                     <input type="url" id="adm-banner" class="form-input" style="flex:1; margin:0;" placeholder="Link directo de Postimages (.jpg o .png)">
@@ -65,12 +61,15 @@
 
         <div id="tab-nuevo" class="tab-content" style="display:block;">
             <h3 style="margin-top:0; color:var(--text);">Nuevo Producto</h3>
-            <p style="color:var(--text-muted); font-size:0.9rem;">⚠️ Ingresa el precio en <strong>Pesos Uruguayos</strong>.</p>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                 <input type="text" id="n-nombre" class="form-input" placeholder="Nombre del Producto">
                 <input type="number" id="n-precio" class="form-input" placeholder="Precio en PESOS (Ej: 1500)">
-                <input type="text" id="n-cat" class="form-input" placeholder="Categoría (Ej: Perfumes, Tecnología, Ropa)">
-                <input type="url" id="n-img" class="form-input" placeholder="Link Directo Imagen (Postimages)">
+                <input type="text" id="n-cat" class="form-input" placeholder="Categoría (Ej: Perfumes, Tecnología)">
+                <input type="url" id="n-img" class="form-input" placeholder="Link Directo Imagen">
+                <select id="n-stock" class="form-input" style="grid-column: 1 / -1;">
+                    <option value="true">✅ Disponible en Stock</option>
+                    <option value="false">❌ Agotado / Sin Stock</option>
+                </select>
             </div>
             <textarea id="n-desc" class="form-input" placeholder="Descripción del producto..." rows="4" style="margin-top:15px;"></textarea>
             <button class="btn-add" onclick="crearProducto()" style="width:auto; padding:12px 30px; margin-top:15px;">Publicar Producto</button>
@@ -79,7 +78,7 @@
         <div id="tab-inventario" class="tab-content">
             <h3 style="margin-top:0; color:var(--text);">Gestión de Productos</h3>
             <table id="tabla-inv">
-                <thead><tr><th>Img</th><th>Detalle</th><th>Acción</th></tr></thead>
+                <thead><tr><th>Img</th><th>Detalle</th><th>Estado</th><th>Acción</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -93,7 +92,7 @@
         </div>
 
         <div id="tab-resenas" class="tab-content">
-            <h3 style="margin-top:0; color:var(--text);">Moderación de Comentarios</h3>
+            <h3 style="margin-top:0; color:var(--text);">Moderación</h3>
             <table id="tabla-resenas">
                 <thead><tr><th>Producto</th><th>Usuario</th><th>Comentario</th><th>⭐</th><th>Acción</th></tr></thead>
                 <tbody></tbody>
@@ -110,11 +109,15 @@
             <input type="number" id="e-precio" class="form-input" placeholder="Precio en Pesos">
             <input type="text" id="e-cat" class="form-input" placeholder="Categoría">
             <input type="url" id="e-img" class="form-input" placeholder="URL Imagen">
+            <select id="e-stock" class="form-input">
+                <option value="true">✅ Disponible en Stock</option>
+                <option value="false">❌ Agotado / Sin Stock</option>
+            </select>
             <textarea id="e-desc" class="form-input" rows="4" placeholder="Descripción"></textarea>
             <button class="btn-add" onclick="guardarEdicion()" style="margin-top:15px;">Guardar Cambios</button>
         </div>
     </div>
 
-    <script src="admin.js?v=3.0"></script>
+    <script src="admin.js?v=4.0"></script>
 </body>
 </html>

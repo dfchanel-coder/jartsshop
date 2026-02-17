@@ -36,16 +36,14 @@ try {
 
 const requireAuth = (req, res, next) => { if (!req.session.userId) return res.status(401).json({ error: 'No autorizado' }); next(); };
 
-// --- SISTEMA ANTI-CACHÉ PARA LA API ---
-// Esto obliga a los navegadores y al dominio a pedir la info en vivo SIEMPRE.
-app.use('/api', (req, res, next) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    next();
-});
+app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private'); next(); });
 
 // --- PÚBLICO ---
 app.get('/api/perfumes', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM perfumes ORDER BY id DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
+});
+app.get('/api/perfumes/:id', async (req, res) => {
+    try { const result = await pool.query('SELECT * FROM perfumes WHERE id = $1', [req.params.id]); res.json(result.rows[0]); } catch (err) { res.status(500).send(err.message); }
 });
 app.get('/api/perfumes/:id/resenas', async (req, res) => {
     try { const result = await pool.query('SELECT * FROM resenas WHERE perfume_id = $1 ORDER BY fecha DESC', [req.params.id]); res.json(result.rows); } catch (err) { res.status(500).send(err.message); }
@@ -59,10 +57,7 @@ app.get('/api/configuracion', async (req, res) => {
         const result = await pool.query("SELECT clave, valor FROM configuracion");
         const config = {};
         result.rows.forEach(r => config[r.clave] = r.valor);
-        res.json({
-            cotizacion: config.cotizacion_brl ? parseFloat(config.cotizacion_brl) : 8.50,
-            banner_url: config.banner_url || ''
-        });
+        res.json({ cotizacion: config.cotizacion_brl ? parseFloat(config.cotizacion_brl) : 8.50, banner_url: config.banner_url || '' });
     } catch (err) { res.json({ cotizacion: 8.50, banner_url: '' }); }
 });
 
@@ -76,25 +71,27 @@ app.post('/api/login', async (req, res) => {
 });
 app.get('/api/check-auth', (req, res) => res.json({ authenticated: !!req.session.userId }));
 app.post('/api/logout', (req, res) => { req.session.destroy(); res.json({ success: true }); });
-app.get('/setup-admin', async (req, res) => { try { const hash = await bcrypt.hash('admin123', 10); await pool.query('INSERT INTO usuarios_admin (usuario, password) VALUES ($1, $2) ON CONFLICT DO NOTHING', ['admin', hash]); res.send('OK'); } catch (err) { res.status(500).send(err.message); } });
 
-app.post('/api/admin/productos', requireAuth, async (req, res) => { try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion) VALUES ($1, $2, $3, $4, $5)', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
-app.put('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, imagen_url=$4, descripcion=$5 WHERE id=$6', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
+app.post('/api/admin/productos', requireAuth, async (req, res) => { 
+    const activo = req.body.activo !== false; 
+    try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, imagen_url, descripcion, activo) VALUES ($1, $2, $3, $4, $5, $6)', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion, activo]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
+});
+app.put('/api/admin/productos/:id', requireAuth, async (req, res) => { 
+    const activo = req.body.activo !== false;
+    try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, imagen_url=$4, descripcion=$5, activo=$6 WHERE id=$7', [req.body.nombre, req.body.precio, req.body.categoria, req.body.imagen_url, req.body.descripcion, activo, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
+});
 app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
+
 app.get('/api/admin/ordenes', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT * FROM ordenes ORDER BY fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.post('/api/admin/orden-estado', requireAuth, async (req, res) => { try { await pool.query('UPDATE ordenes SET estado = $1 WHERE id = $2', [req.body.estado, req.body.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
+
 app.get('/api/admin/resenas', requireAuth, async (req, res) => { try { const result = await pool.query('SELECT r.*, p.nombre AS perfume_nombre FROM resenas r JOIN perfumes p ON r.perfume_id = p.id ORDER BY r.fecha DESC'); res.json(result.rows); } catch (err) { res.status(500).send(err.message); } });
 app.delete('/api/admin/resenas/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM resenas WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
-// NUEVO SISTEMA UPSERT (Si no existe, lo crea. Si existe, lo actualiza).
 app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
     try {
-        if (req.body.cotizacion !== undefined) {
-            await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.cotizacion]);
-        }
-        if (req.body.banner_url !== undefined) {
-            await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.banner_url]);
-        }
+        if (req.body.cotizacion !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.cotizacion]);
+        if (req.body.banner_url !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.banner_url]);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -117,6 +114,20 @@ app.post('/api/nueva-orden', async (req, res) => {
             return res.json({ type: 'mp', id: response.id });
         }
     } catch (error) { res.status(500).json({ error: 'Error procesando orden' }); }
+});
+
+// --- RUTA MÁGICA PARA SALVAR LOS PRODUCTOS VIEJOS ---
+app.get('/fix-db', async (req, res) => {
+    try {
+        await pool.query('CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT)');
+        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
+        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
+        
+        // ESTA LÍNEA AGREGA EL STOCK A LOS PERFUMES VIEJOS SIN BORRAR NADA
+        await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true');
+        
+        res.send('✅ Base de datos actualizada con Modo Tienda, Banner y Stock.');
+    } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 
 app.listen(process.env.PORT || 3000, () => console.log('Servidor OK'));
