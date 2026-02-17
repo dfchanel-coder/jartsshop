@@ -1,7 +1,7 @@
 let carrito = JSON.parse(localStorage.getItem('jarts_carrito')) || [];
 let todosLosProductos = []; 
 let categoriaActual = 'Todas';
-let subcategoriaActual = 'Todas'; // NUEVO: Rastreador de subcategorías
+let subcategoriaActual = 'Todas'; 
 
 // --- MULTIMONEDA E IDIOMA ---
 let cotizacionBRL = 8.50; 
@@ -94,6 +94,26 @@ function showToast(mensaje, tipo = 'success') {
     }, 3000);
 }
 
+// --- NUEVO: SISTEMA NATIVO DE COMPARTIR (WEB SHARE API) ---
+async function compartirProducto(titulo, texto, url) {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: titulo,
+                text: texto,
+                url: url
+            });
+        } catch (err) {
+            console.log('Interacción de compartir cancelada o error', err);
+        }
+    } else {
+        // Fallback: Si la PC o celular es viejo y no tiene el menú nativo, le copia el link
+        navigator.clipboard.writeText(texto + " " + url).then(() => {
+            showToast(idioma === 'pt' ? 'Link copiado!' : '¡Enlace copiado!', 'success');
+        });
+    }
+}
+
 // --- CARRITO ---
 function guardarCarrito() { localStorage.setItem('jarts_carrito', JSON.stringify(carrito)); actualizarCarritoUI(); }
 function agregarAlCarrito(id, title, unit_price) {
@@ -158,26 +178,21 @@ async function cargarCatalogo() {
     renderizarProductos(categoriaActual, subcategoriaActual);
 }
 
-// --- MENÚ DE DOS NIVELES (CATEGORÍA > SUBCATEGORÍA) ---
 function renderizarFiltros() {
     const container = document.getElementById('filtros-categoria');
     if (!container) return;
     
-    // 1. Dibuja las categorías principales (Madres)
     const categorias = ['Todas', ...new Set(todosLosProductos.map(p => p.categoria))];
     let html = '<div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap; width:100%;">';
     html += categorias.map(c => `<button class="filter-btn ${c === categoriaActual ? 'active' : ''}" onclick="filtrarPor('${c}')">${c === 'Todas' ? (idioma === 'pt' ? 'Todas' : 'Todas') : c}</button>`).join('');
     html += '</div>';
 
-    // 2. Si hay una categoría madre seleccionada, revisa si tiene subcategorías
     if (categoriaActual !== 'Todas') {
         const prodsDeCat = todosLosProductos.filter(p => p.categoria === categoriaActual);
-        // Sacamos subcategorías limpiando las que están vacías
         const subcategoriasRaw = [...new Set(prodsDeCat.map(p => p.subcategoria))].filter(s => s && s.trim() !== '');
         
         if (subcategoriasRaw.length > 0) {
             const subcategorias = ['Todas', ...subcategoriasRaw];
-            // Dibuja la fila secundaria con un estilo un poco más pequeño para diferenciar
             html += '<div class="fade-in" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; width:100%; margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px; max-width: 600px;">';
             html += subcategorias.map(s => {
                 const btnLabel = s === 'Todas' ? (idioma === 'pt' ? 'Ver Tudo' : 'Ver Todo') : s;
@@ -195,7 +210,7 @@ function renderizarFiltros() {
 
 function filtrarPor(cat) { 
     categoriaActual = cat; 
-    subcategoriaActual = 'Todas'; // Al cambiar la madre, se resetea la subcategoría
+    subcategoriaActual = 'Todas'; 
     document.getElementById('buscador-productos').value = ''; 
     renderizarFiltros(); 
     renderizarProductos(cat, subcategoriaActual); 
@@ -208,7 +223,6 @@ function filtrarPorSub(subcat) {
     renderizarProductos(categoriaActual, subcat);
 }
 
-// --- RENDERIZADO TURBO CON SUBCATEGORÍAS ---
 async function renderizarProductos(categoriaSeleccionada, subcategoriaSeleccionada = 'Todas', searchQuery = '') {
     const container = document.getElementById('catalogo');
     container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
@@ -218,9 +232,7 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
     if (searchQuery !== '') {
         filtrados = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(searchQuery) || (p.descripcion && p.descripcion.toLowerCase().includes(searchQuery)));
     } else {
-        // Filtramos por Categoría Madre
         let base = categoriaSeleccionada === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaSeleccionada);
-        // Si hay una subcategoría seleccionada, filtramos la base aún más
         if (subcategoriaSeleccionada !== 'Todas') {
             base = base.filter(p => p.subcategoria === subcategoriaSeleccionada);
         }
@@ -241,7 +253,6 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
         htmlAcumulado += generarTarjetasHTML(filtrados);
         htmlAcumulado += `</div>`;
     } else {
-        // Construcción de la visual de bloques
         const categoriasARenderizar = categoriaSeleccionada === 'Todas' ? [...new Set(filtrados.map(p => p.categoria))] : [categoriaSeleccionada]; 
         
         for (const cat of categoriasARenderizar) {
@@ -252,13 +263,11 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
                     htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
                 }
 
-                // Determinar qué subtítulos mostrar
                 const subcategoriasARenderizar = subcategoriaSeleccionada === 'Todas' ? [...new Set(productosDeCategoria.map(p => p.subcategoria || ''))] : [subcategoriaSeleccionada];
                 
                 for (const sub of subcategoriasARenderizar) {
                     const prodSub = productosDeCategoria.filter(p => (p.subcategoria || '') === sub);
                     if (prodSub.length > 0) {
-                        // Solo muestra el título chiquito si hay subcategoría y NO está filtrada individualmente
                         if (sub !== '' && subcategoriaSeleccionada === 'Todas') {
                             htmlAcumulado += `<h3 style="margin-top: 20px; margin-bottom: 15px; font-size: 1.3rem; color: var(--accent); border-bottom: 1px dashed var(--border); padding-bottom: 5px; width: fit-content;">${sub}</h3>`;
                         }
@@ -296,8 +305,10 @@ function generarTarjetasHTML(arrayDeProductos) {
     let html = '';
     for (const p of arrayDeProductos) {
         const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
-        const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${linkProd}` : `¡Mirá este producto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${linkProd}`;
-        const linkWA = getWaLink(msgWaText);
+        // Armamos el texto limpio a compartir
+        const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este producto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
+        const safeShareText = shareText.replace(/'/g, "\\'");
+        const safeNombre = p.nombre.replace(/'/g, "\\'");
 
         html += `
             <div class="product-card ${!p.activo ? 'agotado' : ''}">
@@ -306,14 +317,15 @@ function generarTarjetasHTML(arrayDeProductos) {
                     <img src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
                     <h3>${p.nombre}</h3>
                 </a>
-                <div class="stars-container" id="stars-${p.id}" onclick="abrirResenas(${p.id}, '${p.nombre.replace(/'/g, "\\'")}')">
+                <div class="stars-container" id="stars-${p.id}" onclick="abrirResenas(${p.id}, '${safeNombre}')">
                     <span style="color:var(--text-muted); font-size:0.8rem;"><i class="fa fa-spinner fa-spin"></i> Cargando...</span>
                 </div>
                 <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
                 <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
                 <div style="display:flex; gap:10px; margin-top:auto;">
-                    <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
-                    <a href="${linkWA}" target="_blank" class="btn-share" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); width:44px; height:44px; border-radius:8px; display:flex; justify-content:center; align-items:center; text-decoration:none; transition:0.3s;" title="Compartir" onmouseover="this.style.background='#25d366'; this.style.color='white'; this.style.borderColor='#25d366';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text)'; this.style.borderColor='var(--border)';"><i class="fas fa-share-nodes"></i></a>
+                    <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${safeNombre}', ${p.precio})"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
+                    
+                    <button onclick="compartirProducto('${safeNombre}', '${safeShareText}', '${linkProd}')" class="btn-share" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); width:44px; height:44px; border-radius:8px; display:flex; justify-content:center; align-items:center; cursor:pointer; transition:0.3s;" title="Compartir" onmouseover="this.style.background='#25d366'; this.style.color='white'; this.style.borderColor='#25d366';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text)'; this.style.borderColor='var(--border)';"><i class="fas fa-share-nodes"></i></button>
                 </div>
             </div>`;
     }
@@ -346,8 +358,19 @@ async function cargarProductoIndividual() {
         document.getElementById('p-btn-add').onclick = () => agregarAlCarrito(p.id, p.nombre, p.precio);
     }
 
-    const msgWaText = idioma === 'pt' ? `Olha este produto na Jart's Shop!\n${p.nombre} por ${formatPrecio(p.precio)}\n\nVeja aqui: ${window.location.href}` : `¡Mirá este produto en Jart's Shop!\n${p.nombre} a ${formatPrecio(p.precio)}\n\nPodés verlo acá: ${window.location.href}`;
-    document.getElementById('p-btn-wa').href = getWaLink(msgWaText);
+    // ACTUALIZACIÓN DEL BOTÓN DE COMPARTIR INTERNO
+    const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este producto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
+    const shareUrl = window.location.href;
+    const btnShare = document.getElementById('p-btn-wa');
+    if (btnShare) {
+        btnShare.removeAttribute('href');
+        btnShare.removeAttribute('target');
+        btnShare.style.cursor = 'pointer';
+        btnShare.onclick = (e) => {
+            e.preventDefault();
+            compartirProducto(p.nombre, shareText, shareUrl);
+        };
+    }
     
     cargarResenasProducto(id);
 }
