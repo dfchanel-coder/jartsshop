@@ -67,7 +67,7 @@ app.get('/api/configuracion', async (req, res) => {
         res.json({ 
             cotizacion: config.cotizacion_brl ? parseFloat(config.cotizacion_brl) : 8.50, 
             banner_url: config.banner_url || '',
-            mensaje_envios: config.mensaje_envios || '' // NUEVO
+            mensaje_envios: config.mensaje_envios || ''
         });
     } catch (err) { res.json({ cotizacion: 8.50, banner_url: '', mensaje_envios: '' }); }
 });
@@ -104,7 +104,7 @@ app.put('/api/admin/configuracion', requireAuth, async (req, res) => {
     try {
         if (req.body.cotizacion !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.cotizacion]);
         if (req.body.banner_url !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.banner_url]);
-        if (req.body.mensaje_envios !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('mensaje_envios', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.mensaje_envios]); // NUEVO
+        if (req.body.mensaje_envios !== undefined) await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('mensaje_envios', $1) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor", [req.body.mensaje_envios]);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -136,13 +136,25 @@ app.get('/fix-db', async (req, res) => {
         await pool.query('CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT)');
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('cotizacion_brl', '8.50') ON CONFLICT DO NOTHING");
         await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('banner_url', '') ON CONFLICT DO NOTHING");
-        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('mensaje_envios', '') ON CONFLICT DO NOTHING"); // NUEVO
+        await pool.query("INSERT INTO configuracion (clave, valor) VALUES ('mensaje_envios', '') ON CONFLICT DO NOTHING");
         
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS subcategoria VARCHAR(100)');
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true');
         await pool.query(`UPDATE perfumes SET subcategoria = categoria, categoria = 'Perfumes' WHERE categoria IN ('Femenino', 'Masculino')`);
         res.send('✅ Base de datos actualizada: Subcategorías y Mensajes de envío listos.');
     } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
+});
+
+// --- RUTA TEMPORAL PARA CAMBIAR CREDENCIALES ---
+app.get('/setup-admin', async (req, res) => {
+    try {
+        const hash = await bcrypt.hash('Despegue26!!', 10);
+        await pool.query('DELETE FROM usuarios_admin'); 
+        await pool.query('INSERT INTO usuarios_admin (usuario, password) VALUES ($1, $2)', ['javierdc', hash]);
+        res.send('✅ Credenciales actualizadas. Nuevo usuario: javierdc. Ya puedes ir a loguearte.');
+    } catch (err) {
+        res.status(500).send('❌ Error: ' + err.message);
+    }
 });
 
 app.listen(process.env.PORT || 3000, () => console.log('Servidor OK'));

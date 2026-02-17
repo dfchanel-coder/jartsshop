@@ -10,6 +10,9 @@ let todosLosProductos = [];
 let categoriaActual = 'Todas';
 let subcategoriaActual = 'Todas'; 
 
+// NUEVO: Lógica de Paginación
+let itemsMostrados = 12; 
+
 let cotizacionBRL = 8.50; 
 let monedaActual = localStorage.getItem('jarts_moneda') || 'UYU';
 let idioma = monedaActual === 'BRL' ? 'pt' : 'es';
@@ -17,8 +20,8 @@ const WA_UY = '59899822758';
 const WA_BR = '5555996679276';
 
 const textos = {
-    es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría.", agotado: "Sin Stock", agregado: "¡Agregado al carrito!", sinBusqueda: "No se encontraron resultados.", limitePerfumes: "Límite máximo: 2 perfumes por pedido." },
-    pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria.", agotado: "Esgotado", agregado: "Adicionado ao carrinho!", sinBusqueda: "Nenhum resultado encontrado.", limitePerfumes: "Limite máximo: 2 perfumes por pedido." }
+    es: { vacio: "Tu carrito está vacío", quitar: "Quitar", agregar: "Agregar al Carrito", nuevo: "Nuevo", sePrimero: "Sé el primero en opinar", sinProd: "No hay productos en esta categoría.", agotado: "Sin Stock", agregado: "¡Agregado al carrito!", sinBusqueda: "No se encontraron resultados.", limitePerfumes: "Límite máximo: 2 perfumes por pedido.", cargarMas: "Cargar más productos <i class='fa fa-chevron-down'></i>" },
+    pt: { vacio: "Seu carrinho está vazio", quitar: "Remover", agregar: "Adicionar ao Carrinho", novo: "Novo", sePrimeiro: "Seja o primeiro a avaliar", sinProd: "Nenhum produto encontrado nesta categoria.", agotado: "Esgotado", agregado: "Adicionado ao carrinho!", sinBusqueda: "Nenhum resultado encontrado.", limitePerfumes: "Limite máximo: 2 perfumes por pedido.", cargarMas: "Carregar mais produtos <i class='fa fa-chevron-down'></i>" }
 };
 
 async function initConfig() {
@@ -27,7 +30,6 @@ async function initConfig() {
         const data = await res.json();
         cotizacionBRL = data.cotizacion || 8.50;
         
-        // NUEVO: Barra de envíos
         const topBar = document.getElementById('top-announcement');
         if (topBar && data.mensaje_envios && data.mensaje_envios.trim() !== '') {
             topBar.innerText = data.mensaje_envios;
@@ -110,7 +112,6 @@ async function compartirProducto(titulo, texto, url) {
     }
 }
 
-// --- CARRITO INTELIGENTE ---
 function guardarCarrito() { localStorage.setItem('jarts_carrito', JSON.stringify(carrito)); actualizarCarritoUI(); }
 
 function agregarAlCarrito(id, title, unit_price, categoria) {
@@ -182,6 +183,7 @@ function configurarBuscador() {
     if (!inputBuscador) return;
     inputBuscador.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
+        itemsMostrados = 12; // Resetea la paginación al buscar
         renderizarProductos(categoriaActual, subcategoriaActual, query);
     });
 }
@@ -225,19 +227,28 @@ function renderizarFiltros() {
 }
 
 function filtrarPor(cat) { 
-    categoriaActual = cat; subcategoriaActual = 'Todas'; 
+    categoriaActual = cat; subcategoriaActual = 'Todas'; itemsMostrados = 12; // RESETEA PAGINACIÓN
     document.getElementById('buscador-productos').value = ''; 
     renderizarFiltros(); renderizarProductos(cat, subcategoriaActual); 
 }
 
 function filtrarPorSub(subcat) {
-    subcategoriaActual = subcat; document.getElementById('buscador-productos').value = ''; 
+    subcategoriaActual = subcat; itemsMostrados = 12; // RESETEA PAGINACIÓN
+    document.getElementById('buscador-productos').value = ''; 
     renderizarFiltros(); renderizarProductos(categoriaActual, subcat);
+}
+
+// NUEVO: Función para el botón
+function cargarMas() {
+    itemsMostrados += 12;
+    renderizarProductos(categoriaActual, subcategoriaActual, document.getElementById('buscador-productos').value);
 }
 
 async function renderizarProductos(categoriaSeleccionada, subcategoriaSeleccionada = 'Todas', searchQuery = '') {
     const container = document.getElementById('catalogo');
-    container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
+    if (!document.getElementById('grid-container-main')) {
+        container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
+    }
     const mainContainer = document.getElementById('grid-container-main');
 
     let filtrados = [];
@@ -255,17 +266,19 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
         return; 
     }
 
+    // CORTE DE PAGINACIÓN
+    const productosAMostrar = filtrados.slice(0, itemsMostrados);
     let htmlAcumulado = '';
 
     if (searchQuery !== '') {
         const tituloBusqueda = idioma === 'pt' ? 'Resultados da Pesquisa' : 'Resultados de Búsqueda';
         htmlAcumulado += `<h2 style="margin-top: 20px; margin-bottom: 25px; font-size: 1.5rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 10px;">${tituloBusqueda}</h2><div class="products-grid">`;
-        htmlAcumulado += generarTarjetasHTML(filtrados);
+        htmlAcumulado += generarTarjetasHTML(productosAMostrar);
         htmlAcumulado += `</div>`;
     } else {
-        const categoriasARenderizar = categoriaSeleccionada === 'Todas' ? [...new Set(filtrados.map(p => p.categoria))] : [categoriaSeleccionada]; 
+        const categoriasARenderizar = categoriaSeleccionada === 'Todas' ? [...new Set(productosAMostrar.map(p => p.categoria))] : [categoriaSeleccionada]; 
         for (const cat of categoriasARenderizar) {
-            const productosDeCategoria = filtrados.filter(p => p.categoria === cat);
+            const productosDeCategoria = productosAMostrar.filter(p => p.categoria === cat);
             if (productosDeCategoria.length > 0) {
                 if (categoriaSeleccionada === 'Todas') {
                     htmlAcumulado += `<h2 style="margin-top: 50px; margin-bottom: 25px; font-size: 1.8rem; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight:700;">${cat}</h2>`;
@@ -284,9 +297,19 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
         }
     }
     
+    // Inyectar Botón "Cargar Más" si quedaron productos afuera
+    if (filtrados.length > itemsMostrados) {
+        htmlAcumulado += `
+            <div style="text-align:center; margin-top: 40px; margin-bottom: 20px;">
+                <button onclick="cargarMas()" class="btn-add" style="width:auto; padding: 14px 40px; border-radius: 30px; font-size: 1rem; background: var(--card-bg); border: 1px solid var(--accent); color: var(--text); box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: 0.3s;" onmouseover="this.style.background='var(--accent)'; this.style.color='white';" onmouseout="this.style.background='var(--card-bg)'; this.style.color='var(--text)';">
+                    ${textos[idioma].cargarMas}
+                </button>
+            </div>`;
+    }
+
     mainContainer.innerHTML = htmlAcumulado;
 
-    filtrados.forEach(async (p) => {
+    productosAMostrar.forEach(async (p) => {
         try {
             const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
             const resenas = await resenasReq.json();
