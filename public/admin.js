@@ -65,12 +65,13 @@ function showTab(id, element) {
 
 async function crearProducto() {
     const data = { 
-        nombre: document.getElementById('n-nombre').value, 
+        // SANITIZACIÓN: .trim() elimina los espacios vacíos al principio y al final
+        nombre: document.getElementById('n-nombre').value.trim(), 
         precio: document.getElementById('n-precio').value, 
-        categoria: document.getElementById('n-cat').value, 
-        subcategoria: document.getElementById('n-subcat').value,
-        imagen_url: document.getElementById('n-img').value, 
-        descripcion: document.getElementById('n-desc').value,
+        categoria: document.getElementById('n-cat').value.trim(), 
+        subcategoria: document.getElementById('n-subcat').value.trim(),
+        imagen_url: document.getElementById('n-img').value.trim(), 
+        descripcion: document.getElementById('n-desc').value.trim(),
         activo: document.getElementById('n-stock').value === "true"
     };
     if (!data.nombre || !data.precio || !data.categoria || !data.imagen_url) return alert('Datos obligatorios faltantes.');
@@ -119,12 +120,13 @@ function editar(p) {
 async function guardarEdicion() {
     const id = document.getElementById('e-id').value;
     const data = { 
-        nombre: document.getElementById('e-nombre').value, 
+        // SANITIZACIÓN: Aplicado también en la edición
+        nombre: document.getElementById('e-nombre').value.trim(), 
         precio: document.getElementById('e-precio').value, 
-        categoria: document.getElementById('e-cat').value, 
-        subcategoria: document.getElementById('e-subcat').value,
-        imagen_url: document.getElementById('e-img').value, 
-        descripcion: document.getElementById('e-desc').value,
+        categoria: document.getElementById('e-cat').value.trim(), 
+        subcategoria: document.getElementById('e-subcat').value.trim(),
+        imagen_url: document.getElementById('e-img').value.trim(), 
+        descripcion: document.getElementById('e-desc').value.trim(),
         activo: document.getElementById('e-stock').value === "true"
     };
     await adminFetch('/api/admin/productos/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -180,7 +182,7 @@ async function borrarResena(id) {
     } 
 }
 
-// NUEVO: Lee el campo de envíos al cargar el panel
+// Lee el campo de envíos al cargar el panel
 async function cargarConfiguracionAdmin() {
     try {
         const res = await fetch('/api/configuracion?t=' + new Date().getTime(), { cache: 'no-store' });
@@ -191,7 +193,7 @@ async function cargarConfiguracionAdmin() {
     } catch(e) { console.error('Error config', e); }
 }
 
-// NUEVO: Manda el mensaje de envíos a la base de datos
+// Manda el mensaje de envíos a la base de datos
 async function guardarConfiguracion() {
     const cotizacion = document.getElementById('adm-cotizacion').value;
     const bannerUrl = document.getElementById('adm-banner').value;
