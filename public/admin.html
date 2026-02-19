@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - JART'S SHOP</title>
-    <link rel="stylesheet" href="style.css?v=9.0">
+    <link rel="stylesheet" href="style.css?v=10.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .admin-box { max-width: 1000px; margin: 40px auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 1px solid var(--border); }
@@ -20,6 +20,7 @@
         .btn-accion:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .btn-editar { background: #10b981; }
         .btn-borrar { background: #ef4444; }
+        .seccion-idioma { border-left: 3px solid var(--accent); padding-left: 15px; margin-top: 25px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -65,18 +66,29 @@
 
         <div id="tab-nuevo" class="tab-content" style="display:block;">
             <h3 style="margin-top:0; color:var(--text);">Nuevo Producto</h3>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                <input type="text" id="n-nombre" class="form-input" placeholder="Nombre del Producto">
-                <input type="number" id="n-precio" class="form-input" placeholder="Precio en PESOS (Ej: 1500)">
-                <input type="text" id="n-cat" class="form-input" placeholder="Categoría Madre (Ej: Perfumes, Deportes)">
-                <input type="text" id="n-subcat" class="form-input" placeholder="Subcategoría (Opcional, Ej: Femenino, Pelotas)">
-                <input type="url" id="n-img" class="form-input" style="grid-column: 1 / -1;" placeholder="Link Directo Imagen">
-                <select id="n-stock" class="form-input" style="grid-column: 1 / -1;">
-                    <option value="true">✅ Disponible en Stock</option>
-                    <option value="false">❌ Agotado / Sin Stock</option>
-                </select>
+            
+            <div class="seccion-idioma">
+                <h4 style="margin: 0 0 15px 0; color: var(--text);">🇺🇾 Versión en Español (Principal)</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                    <input type="text" id="n-nombre" class="form-input" placeholder="Nombre del Producto">
+                    <input type="number" id="n-precio" class="form-input" placeholder="Precio en PESOS (Ej: 1500)">
+                    <input type="text" id="n-cat" class="form-input" placeholder="Categoría Madre (Ej: Perfumes, Deportes)">
+                    <input type="text" id="n-subcat" class="form-input" placeholder="Subcategoría (Opcional, Ej: Femenino, Pelotas)">
+                    <input type="url" id="n-img" class="form-input" style="grid-column: 1 / -1;" placeholder="Link Directo Imagen">
+                    <select id="n-stock" class="form-input" style="grid-column: 1 / -1;">
+                        <option value="true">✅ Disponible en Stock</option>
+                        <option value="false">❌ Agotado / Sin Stock</option>
+                    </select>
+                </div>
+                <textarea id="n-desc" class="form-input" placeholder="Descripción del producto en Español..." rows="4" style="margin-top:15px;"></textarea>
             </div>
-            <textarea id="n-desc" class="form-input" placeholder="Descripción del producto..." rows="4" style="margin-top:15px;"></textarea>
+
+            <div class="seccion-idioma" style="border-left-color: #10b981;">
+                <h4 style="margin: 0 0 15px 0; color: var(--text);">🇧🇷 Versión en Portugués (Opcional)</h4>
+                <input type="text" id="n-nombre-pt" class="form-input" placeholder="Nome do Produto (Portugués)">
+                <textarea id="n-desc-pt" class="form-input" placeholder="Descrição do produto (Portugués)..." rows="4" style="margin-top:15px;"></textarea>
+            </div>
+
             <button class="btn-add" onclick="crearProducto()" style="width:auto; padding:12px 30px; margin-top:15px;">Publicar Producto</button>
         </div>
 
@@ -110,22 +122,34 @@
             <span class="close-modal" onclick="document.getElementById('modal-edit').style.display='none'">&times;</span>
             <h3 style="margin-top:0; color:var(--text);">Editar Producto</h3>
             <input type="hidden" id="e-id">
-            <input type="text" id="e-nombre" class="form-input" placeholder="Nombre">
-            <input type="number" id="e-precio" class="form-input" placeholder="Precio en Pesos">
-            <div style="display: flex; gap: 10px;">
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <input type="text" id="e-cat" class="form-input" placeholder="Cat. Madre">
-                <input type="text" id="e-subcat" class="form-input" placeholder="Subcategoría (Opcional)">
+                <input type="text" id="e-subcat" class="form-input" placeholder="Subcat. (Opcional)">
             </div>
+            <input type="number" id="e-precio" class="form-input" placeholder="Precio en Pesos">
             <input type="url" id="e-img" class="form-input" placeholder="URL Imagen">
             <select id="e-stock" class="form-input">
                 <option value="true">✅ Disponible en Stock</option>
                 <option value="false">❌ Agotado / Sin Stock</option>
             </select>
-            <textarea id="e-desc" class="form-input" rows="4" placeholder="Descripción"></textarea>
+
+            <div class="seccion-idioma" style="margin-top: 15px; padding-bottom: 5px;">
+                <h4 style="margin: 0 0 10px 0; color: var(--text); font-size: 0.9rem;">🇺🇾 Español</h4>
+                <input type="text" id="e-nombre" class="form-input" placeholder="Nombre (ES)">
+                <textarea id="e-desc" class="form-input" rows="3" placeholder="Descripción (ES)"></textarea>
+            </div>
+
+            <div class="seccion-idioma" style="border-left-color: #10b981; margin-top: 10px;">
+                <h4 style="margin: 0 0 10px 0; color: var(--text); font-size: 0.9rem;">🇧🇷 Portugués</h4>
+                <input type="text" id="e-nombre-pt" class="form-input" placeholder="Nombre (PT)">
+                <textarea id="e-desc-pt" class="form-input" rows="3" placeholder="Descripción (PT)"></textarea>
+            </div>
+
             <button class="btn-add" onclick="guardarEdicion()" style="margin-top:15px;">Guardar Cambios</button>
         </div>
     </div>
 
-    <script src="admin.js?v=8.0"></script>
+    <script src="admin.js?v=9.0"></script>
 </body>
 </html>

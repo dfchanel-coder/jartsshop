@@ -13,15 +13,15 @@ app.use(express.static('public'));
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'clave_temporal_desarrollo_2026';
 
-// --- NUEVA CONFIGURACIÓN DE SESIÓN (30 MINUTOS) ---
+// --- CONFIGURACIÓN DE SESIÓN (30 MINUTOS) ---
 app.use(session({ 
     secret: SESSION_SECRET, 
     resave: false, 
     saveUninitialized: true, 
-    rolling: true, // Reinicia el reloj de 30 min con cada acción
+    rolling: true, 
     cookie: { 
         secure: false, 
-        maxAge: 1800000 // 30 minutos exactos en milisegundos
+        maxAge: 1800000 
     } 
 }));
 
@@ -36,7 +36,12 @@ async function iniciarDB() {
             CREATE TABLE IF NOT EXISTS resenas (id SERIAL PRIMARY KEY, perfume_id INT NOT NULL, nombre VARCHAR(100) NOT NULL, estrellas INT NOT NULL CHECK (estrellas >= 1 AND estrellas <= 5), comentario TEXT, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE IF NOT EXISTS configuracion (clave VARCHAR(50) PRIMARY KEY, valor TEXT);
         `);
-        console.log('--- BASE DE DATOS OK ---');
+
+        // FIX BILINGÜE: Agregamos las columnas en portugués sin borrar los datos existentes
+        await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS nombre_pt VARCHAR(255)');
+        await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS descripcion_pt TEXT');
+
+        console.log('--- BASE DE DATOS OK (CON SOPORTE BILINGÜE) ---');
     } catch (err) { console.error('Error DB:', err); }
 }
 iniciarDB();
@@ -97,11 +102,19 @@ app.post('/api/logout', (req, res) => { req.session.destroy(); res.json({ succes
 
 app.post('/api/admin/productos', requireAuth, async (req, res) => { 
     const activo = req.body.activo !== false; 
-    try { await pool.query('INSERT INTO perfumes (nombre, precio, categoria, subcategoria, imagen_url, descripcion, activo) VALUES ($1, $2, $3, $4, $5, $6, $7)', [req.body.nombre, req.body.precio, req.body.categoria, req.body.subcategoria, req.body.imagen_url, req.body.descripcion, activo]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
+    try { 
+        // FIX BILINGÜE: Se inyectan las columnas y valores _pt
+        await pool.query('INSERT INTO perfumes (nombre, precio, categoria, subcategoria, imagen_url, descripcion, activo, nombre_pt, descripcion_pt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [req.body.nombre, req.body.precio, req.body.categoria, req.body.subcategoria, req.body.imagen_url, req.body.descripcion, activo, req.body.nombre_pt, req.body.descripcion_pt]); 
+        res.json({ success: true }); 
+    } catch (err) { res.status(500).send(err.message); } 
 });
 app.put('/api/admin/productos/:id', requireAuth, async (req, res) => { 
     const activo = req.body.activo !== false;
-    try { await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, subcategoria=$4, imagen_url=$5, descripcion=$6, activo=$7 WHERE id=$8', [req.body.nombre, req.body.precio, req.body.categoria, req.body.subcategoria, req.body.imagen_url, req.body.descripcion, activo, req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } 
+    try { 
+        // FIX BILINGÜE: Se inyectan las actualizaciones _pt
+        await pool.query('UPDATE perfumes SET nombre=$1, precio=$2, categoria=$3, subcategoria=$4, imagen_url=$5, descripcion=$6, activo=$7, nombre_pt=$8, descripcion_pt=$9 WHERE id=$10', [req.body.nombre, req.body.precio, req.body.categoria, req.body.subcategoria, req.body.imagen_url, req.body.descripcion, activo, req.body.nombre_pt, req.body.descripcion_pt, req.params.id]); 
+        res.json({ success: true }); 
+    } catch (err) { res.status(500).send(err.message); } 
 });
 app.delete('/api/admin/productos/:id', requireAuth, async (req, res) => { try { await pool.query('DELETE FROM perfumes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).send(err.message); } });
 
@@ -152,8 +165,13 @@ app.get('/fix-db', async (req, res) => {
         
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS subcategoria VARCHAR(100)');
         await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true');
+        
+        // FIX BILINGÜE: Por si Javier entra directamente acá para arreglar algo
+        await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS nombre_pt VARCHAR(255)');
+        await pool.query('ALTER TABLE perfumes ADD COLUMN IF NOT EXISTS descripcion_pt TEXT');
+        
         await pool.query(`UPDATE perfumes SET subcategoria = categoria, categoria = 'Perfumes' WHERE categoria IN ('Femenino', 'Masculino')`);
-        res.send('✅ Base de datos actualizada: Subcategorías y Mensajes de envío listos.');
+        res.send('✅ Base de datos actualizada: Subcategorías, Mensajes y Textos en Portugués listos.');
     } catch (err) { res.status(500).send('❌ Error: ' + err.message); }
 });
 

@@ -259,7 +259,14 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
 
     let filtrados = [];
     if (searchQuery !== '') {
-        filtrados = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(searchQuery) || (p.descripcion && p.descripcion.toLowerCase().includes(searchQuery)));
+        filtrados = todosLosProductos.filter(p => {
+            // FIX BILINGÜE PARA BÚSQUEDA: Busca tanto en español como en portugués
+            const n = p.nombre.toLowerCase();
+            const d = (p.descripcion || '').toLowerCase();
+            const n_pt = (p.nombre_pt || '').toLowerCase();
+            const d_pt = (p.descripcion_pt || '').toLowerCase();
+            return n.includes(searchQuery) || d.includes(searchQuery) || n_pt.includes(searchQuery) || d_pt.includes(searchQuery);
+        });
     } else {
         let base = categoriaSeleccionada === 'Todas' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaSeleccionada);
         if (subcategoriaSeleccionada !== 'Todas') base = base.filter(p => p.subcategoria === subcategoriaSeleccionada);
@@ -342,10 +349,14 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
 function generarTarjetasHTML(arrayDeProductos) {
     let html = '';
     for (const p of arrayDeProductos) {
+        // FIX BILINGÜE: El Paracaídas mágico. Si está en BRL, usa el _pt. Si no hay _pt, usa el normal (ES).
+        const tituloAMostrar = (idioma === 'pt' && p.nombre_pt) ? p.nombre_pt : p.nombre;
+        const descText = (idioma === 'pt' && p.descripcion_pt) ? p.descripcion_pt : (p.descripcion || '');
+        
         const linkProd = `${window.location.origin}/producto.html?id=${p.id}`;
-        const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este producto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
+        const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${tituloAMostrar} por ${formatPrecio(p.precio)}` : `¡Mirá este producto en Jart's Shop! ${tituloAMostrar} a ${formatPrecio(p.precio)}`;
         const safeShareText = shareText.replace(/'/g, "\\'");
-        const safeNombre = p.nombre.replace(/'/g, "\\'");
+        const safeNombre = tituloAMostrar.replace(/'/g, "\\'");
         const safeCat = p.categoria.replace(/'/g, "\\'");
 
         // FIX: Agregamos la clase "reveal" para la animación al hacer scroll
@@ -353,13 +364,13 @@ function generarTarjetasHTML(arrayDeProductos) {
             <div class="product-card reveal ${!p.activo ? 'agotado' : ''}">
                 <a href="/producto.html?id=${p.id}" style="text-decoration:none; color:inherit; display:block; position:relative;">
                     ${!p.activo ? `<div style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:0.8rem; z-index:2;">${textos[idioma].agotado}</div>` : ''}
-                    <img src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
-                    <h3>${p.nombre}</h3>
+                    <img src="${p.imagen_url}" alt="${tituloAMostrar}" loading="lazy" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
+                    <h3>${tituloAMostrar}</h3>
                 </a>
                 <div class="stars-container" id="stars-${p.id}" onclick="abrirResenas(${p.id}, '${safeNombre}')">
                     <span style="color:var(--text-muted); font-size:0.8rem;"><i class="fa fa-spinner fa-spin"></i> Cargando...</span>
                 </div>
-                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${p.descripcion ? p.descripcion.substring(0, 60) + '...' : ''}</p>
+                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; min-height: 40px; line-height: 1.4;">${descText.substring(0, 60)}${descText.length > 60 ? '...' : ''}</p>
                 <p style="font-weight:700; font-size:1.4rem; margin-bottom:15px; color:var(--text);">${formatPrecio(p.precio)}</p>
                 <div style="display:flex; gap:10px; margin-top:auto;">
                     <button class="btn-add" style="flex:1; ${!p.activo ? 'background:var(--border); color:var(--text-muted); cursor:not-allowed;' : ''}" ${p.activo ? `onclick="agregarAlCarrito(${p.id}, '${safeNombre}', ${p.precio}, '${safeCat}')"` : 'disabled'}>${p.activo ? textos[idioma].agregar : textos[idioma].agotado}</button>
@@ -378,9 +389,13 @@ async function cargarProductoIndividual() {
     const res = await fetch(`/api/perfumes/${id}`);
     const p = await res.json();
     
+    // FIX BILINGÜE: Aplicamos el Paracaídas a la vista de producto individual
+    const tituloAMostrar = (idioma === 'pt' && p.nombre_pt) ? p.nombre_pt : p.nombre;
+    const descText = (idioma === 'pt' && p.descripcion_pt) ? p.descripcion_pt : (p.descripcion || '');
+    
     document.getElementById('p-img').src = p.imagen_url;
-    document.getElementById('p-nombre').innerText = p.nombre;
-    document.getElementById('p-desc').innerText = p.descripcion;
+    document.getElementById('p-nombre').innerText = tituloAMostrar;
+    document.getElementById('p-desc').innerText = descText;
     document.getElementById('p-precio').innerText = formatPrecio(p.precio);
     
     if(!p.activo) {
@@ -392,15 +407,15 @@ async function cargarProductoIndividual() {
         btn.style.cursor = 'not-allowed';
     } else {
         document.getElementById('p-btn-add').innerText = textos[idioma].agregar;
-        document.getElementById('p-btn-add').onclick = () => agregarAlCarrito(p.id, p.nombre, p.precio, p.categoria);
+        document.getElementById('p-btn-add').onclick = () => agregarAlCarrito(p.id, tituloAMostrar, p.precio, p.categoria);
     }
 
-    const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${p.nombre} por ${formatPrecio(p.precio)}` : `¡Mirá este produto en Jart's Shop! ${p.nombre} a ${formatPrecio(p.precio)}`;
+    const shareText = idioma === 'pt' ? `Olha este produto na Jart's Shop! ${tituloAMostrar} por ${formatPrecio(p.precio)}` : `¡Mirá este produto en Jart's Shop! ${tituloAMostrar} a ${formatPrecio(p.precio)}`;
     const shareUrl = window.location.href;
     const btnShare = document.getElementById('p-btn-wa');
     if (btnShare) {
         btnShare.removeAttribute('href'); btnShare.removeAttribute('target'); btnShare.style.cursor = 'pointer';
-        btnShare.onclick = (e) => { e.preventDefault(); compartirProducto(p.nombre, shareText, shareUrl); };
+        btnShare.onclick = (e) => { e.preventDefault(); compartirProducto(tituloAMostrar, shareText, shareUrl); };
     }
     
     cargarResenasProducto(id);

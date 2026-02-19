@@ -65,20 +65,23 @@ function showTab(id, element) {
 
 async function crearProducto() {
     const data = { 
-        // SANITIZACIÓN: .trim() elimina los espacios vacíos al principio y al final
         nombre: document.getElementById('n-nombre').value.trim(), 
         precio: document.getElementById('n-precio').value, 
         categoria: document.getElementById('n-cat').value.trim(), 
         subcategoria: document.getElementById('n-subcat').value.trim(),
         imagen_url: document.getElementById('n-img').value.trim(), 
         descripcion: document.getElementById('n-desc').value.trim(),
-        activo: document.getElementById('n-stock').value === "true"
+        activo: document.getElementById('n-stock').value === "true",
+        // FIX BILINGÜE: Capturamos los campos en portugués
+        nombre_pt: document.getElementById('n-nombre-pt').value.trim(),
+        descripcion_pt: document.getElementById('n-desc-pt').value.trim()
     };
-    if (!data.nombre || !data.precio || !data.categoria || !data.imagen_url) return alert('Datos obligatorios faltantes.');
+    if (!data.nombre || !data.precio || !data.categoria || !data.imagen_url) return alert('Datos obligatorios faltantes en Español.');
     
     await adminFetch('/api/admin/productos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     alert('¡Producto guardado!');
-    ['n-nombre', 'n-precio', 'n-img', 'n-desc', 'n-cat', 'n-subcat'].forEach(id => document.getElementById(id).value = '');
+    // Limpiamos también las cajas de portugués
+    ['n-nombre', 'n-precio', 'n-img', 'n-desc', 'n-cat', 'n-subcat', 'n-nombre-pt', 'n-desc-pt'].forEach(id => document.getElementById(id).value = '');
 }
 
 async function cargarInventario() {
@@ -114,20 +117,27 @@ function editar(p) {
     document.getElementById('e-img').value = p.imagen_url; 
     document.getElementById('e-desc').value = p.descripcion;
     document.getElementById('e-stock').value = p.activo ? "true" : "false"; 
+    
+    // FIX BILINGÜE: Carga los datos en PT si existen, sino deja en blanco
+    document.getElementById('e-nombre-pt').value = p.nombre_pt || ''; 
+    document.getElementById('e-desc-pt').value = p.descripcion_pt || ''; 
+    
     document.getElementById('modal-edit').style.display = 'block';
 }
 
 async function guardarEdicion() {
     const id = document.getElementById('e-id').value;
     const data = { 
-        // SANITIZACIÓN: Aplicado también en la edición
         nombre: document.getElementById('e-nombre').value.trim(), 
         precio: document.getElementById('e-precio').value, 
         categoria: document.getElementById('e-cat').value.trim(), 
         subcategoria: document.getElementById('e-subcat').value.trim(),
         imagen_url: document.getElementById('e-img').value.trim(), 
         descripcion: document.getElementById('e-desc').value.trim(),
-        activo: document.getElementById('e-stock').value === "true"
+        activo: document.getElementById('e-stock').value === "true",
+        // FIX BILINGÜE: Guardamos los cambios en PT
+        nombre_pt: document.getElementById('e-nombre-pt').value.trim(),
+        descripcion_pt: document.getElementById('e-desc-pt').value.trim()
     };
     await adminFetch('/api/admin/productos/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     document.getElementById('modal-edit').style.display = 'none'; 
@@ -182,7 +192,6 @@ async function borrarResena(id) {
     } 
 }
 
-// Lee el campo de envíos al cargar el panel
 async function cargarConfiguracionAdmin() {
     try {
         const res = await fetch('/api/configuracion?t=' + new Date().getTime(), { cache: 'no-store' });
@@ -193,7 +202,6 @@ async function cargarConfiguracionAdmin() {
     } catch(e) { console.error('Error config', e); }
 }
 
-// Manda el mensaje de envíos a la base de datos
 async function guardarConfiguracion() {
     const cotizacion = document.getElementById('adm-cotizacion').value;
     const bannerUrl = document.getElementById('adm-banner').value;
