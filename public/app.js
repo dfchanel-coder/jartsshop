@@ -10,7 +10,7 @@ let todosLosProductos = [];
 let categoriaActual = 'Todas';
 let subcategoriaActual = 'Todas'; 
 
-// NUEVO: Lógica de Paginación
+// Lógica de Paginación
 let itemsMostrados = 12; 
 
 let cotizacionBRL = 8.50; 
@@ -228,24 +228,30 @@ function renderizarFiltros() {
 
 function filtrarPor(cat) { 
     categoriaActual = cat; subcategoriaActual = 'Todas'; itemsMostrados = 12; // RESETEA PAGINACIÓN
-    document.getElementById('buscador-productos').value = ''; 
+    const buscador = document.getElementById('buscador-productos');
+    if(buscador) buscador.value = ''; 
     renderizarFiltros(); renderizarProductos(cat, subcategoriaActual); 
 }
 
 function filtrarPorSub(subcat) {
     subcategoriaActual = subcat; itemsMostrados = 12; // RESETEA PAGINACIÓN
-    document.getElementById('buscador-productos').value = ''; 
+    const buscador = document.getElementById('buscador-productos');
+    if(buscador) buscador.value = ''; 
     renderizarFiltros(); renderizarProductos(categoriaActual, subcat);
 }
 
-// NUEVO: Función para el botón
+// FIX: Botón "Cargar Más" blindado
 function cargarMas() {
     itemsMostrados += 12;
-    renderizarProductos(categoriaActual, subcategoriaActual, document.getElementById('buscador-productos').value);
+    const buscador = document.getElementById('buscador-productos');
+    const query = buscador ? buscador.value.trim() : '';
+    renderizarProductos(categoriaActual, subcategoriaActual, query);
 }
 
 async function renderizarProductos(categoriaSeleccionada, subcategoriaSeleccionada = 'Todas', searchQuery = '') {
     const container = document.getElementById('catalogo');
+    if (!container) return; // Evita errores si no está en la página principal
+    
     if (!document.getElementById('grid-container-main')) {
         container.innerHTML = '<div class="fade-in" id="grid-container-main"></div>';
     }
@@ -309,6 +315,9 @@ async function renderizarProductos(categoriaSeleccionada, subcategoriaSelecciona
 
     mainContainer.innerHTML = htmlAcumulado;
 
+    // FIX: Activamos el Scroll Reveal al terminar de pintar las tarjetas
+    iniciarScrollReveal();
+
     productosAMostrar.forEach(async (p) => {
         try {
             const resenasReq = await fetch(`/api/perfumes/${p.id}/resenas`);
@@ -339,8 +348,9 @@ function generarTarjetasHTML(arrayDeProductos) {
         const safeNombre = p.nombre.replace(/'/g, "\\'");
         const safeCat = p.categoria.replace(/'/g, "\\'");
 
+        // FIX: Agregamos la clase "reveal" para la animación al hacer scroll
         html += `
-            <div class="product-card ${!p.activo ? 'agotado' : ''}">
+            <div class="product-card reveal ${!p.activo ? 'agotado' : ''}">
                 <a href="/producto.html?id=${p.id}" style="text-decoration:none; color:inherit; display:block; position:relative;">
                     ${!p.activo ? `<div style="position:absolute; top:10px; right:10px; background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:0.8rem; z-index:2;">${textos[idioma].agotado}</div>` : ''}
                     <img src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" style="${!p.activo ? 'opacity:0.5; filter:grayscale(100%);' : ''}"> 
@@ -407,5 +417,18 @@ async function abrirResenas(id, nombre) { const modal = document.getElementById(
 function cerrarResenas() { document.getElementById('modal-resenas').style.display = 'none'; }
 async function cargarResenas(id) { const res = await fetch(`/api/perfumes/${id}/resenas`); const resenas = await res.json(); const div = document.getElementById('lista-resenas'); div.innerHTML = resenas.length === 0 ? `<p style="color:var(--text-muted); text-align:center;">${textos[idioma].sePrimero}</p>` : resenas.map(r => `<div style="border-bottom:1px solid var(--border); padding:12px 0;"><strong style="color:var(--text);">${r.nombre}</strong> <span style="color:var(--gold); font-size:0.9rem;">${'⭐'.repeat(r.estrellas)}</span><br><small style="color:var(--text-muted); font-size:0.9rem; display:block; margin-top:4px;">${r.comentario}</small></div>`).join(''); }
 async function enviarResena() { const id = document.getElementById('r-perfume-id').value, nombre = document.getElementById('r-nombre').value, estrellas = document.getElementById('r-estrellas').value, comentario = document.getElementById('r-comentario').value; if (!nombre || !comentario) return; await fetch(`/api/perfumes/${id}/resenas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre, estrellas, comentario }) }); document.getElementById('r-nombre').value = ''; document.getElementById('r-comentario').value = ''; cargarResenas(id); renderizarProductos(categoriaActual, subcategoriaActual); }
+
+// FIX: Función de Animación al hacer Scroll
+function iniciarScrollReveal() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+            }
+        });
+    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+    document.querySelectorAll('.reveal:not(.active)').forEach(el => observer.observe(el));
+}
 
 document.addEventListener('DOMContentLoaded', initConfig);

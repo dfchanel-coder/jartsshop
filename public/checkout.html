@@ -95,7 +95,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=3.0"></script>
+    <script src="app.js?v=4.0"></script>
     <script>
         const mpCheckoutUY = new MercadoPago('APP_USR-c14fe09d-66b4-4faa-b684-eb43b153e329'); 
         let metodoPagoElegido = monedaActual === 'UYU' ? 'brou' : 'pix'; 
@@ -179,7 +179,8 @@
             if (!nombre || !tel || !ciudad || !dir) return alert(monedaActual === 'BRL' ? 'Preencha todos os campos.' : 'Completa todos los campos.');
 
             const btn = document.getElementById('btn-procesar');
-            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>...';
+            btn.disabled = true; 
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...'; 
 
             let carritoParaEnviar = [...carrito]; 
             if (metodoPagoElegido.includes('mercadopago')) {
@@ -194,17 +195,19 @@
 
                 const data = await res.json();
                 
+                // EL FIX: Si hay error de red o en Mercado Pago, abortar proceso
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || 'Error al conectar');
+                }
+                
                 if (data.type === 'mp') {
-                    btn.style.display = 'none'; // Aquí sí lo ocultamos porque aparece el de MP
+                    btn.style.display = 'none'; 
                     mpCheckoutUY.bricks().create("wallet", "wallet_container", { 
                         initialization: { preferenceId: data.id },
-                        customization: { 
-                            visual: { 
-                                theme: 'default' 
-                            } 
-                        }
+                        customization: { visual: { theme: 'default' } }
                     });
-                } else {
+                } else if (data.type === 'transfer') {
+                    // FIX: Solo muestra el éxito si de verdad devuelve 'transfer'
                     document.getElementById('checkout-form').style.display = 'none';
                     document.getElementById('pantalla-exito').style.display = 'block';
                     document.getElementById('numero-orden').innerText = `#${data.id}`;
@@ -214,7 +217,12 @@
                     document.getElementById('btn-wa-comprobante').href = `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`;
                     vaciarCarrito();
                 }
-            } catch (error) { alert("Error de conexión"); btn.disabled = false; btn.innerHTML = 'Completar Pedido <i class="fa fa-check"></i>'; }
+            } catch (error) { 
+                console.error("Error en checkout:", error);
+                alert(monedaActual === 'BRL' ? "Houve um problema com a conexão. Tente novamente." : "La conexión está inestable. Por favor, intenta nuevamente."); 
+                btn.disabled = false; 
+                btn.innerHTML = 'Completar Pedido <i class="fa fa-check"></i>'; 
+            }
         }
         
         window.addEventListener('load', async () => {
