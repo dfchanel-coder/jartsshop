@@ -39,6 +39,7 @@
                     <h3 style="margin-top:30px; color:var(--text);" id="t-paso2">2. Datos de Envío</h3>
                     <div class="form-group"><input type="text" id="c-ciudad" class="form-input" placeholder="Ciudad / Cidade" required></div>
                     <div class="form-group"><input type="text" id="c-dir" class="form-input" placeholder="Dirección / Endereço" required></div>
+                    <div class="form-group" id="div-cep" style="display:none;"><input type="text" id="c-cep" class="form-input" placeholder="CEP"></div>
 
                     <h3 style="margin-top:30px; color:var(--text);" id="t-paso3">3. Forma de Pago</h3>
                     <div id="opciones-pago-uy" style="display:none;">
@@ -98,9 +99,8 @@
     <script src="app.js?v=4.0"></script>
     <script>
         const publicKeyUY = 'APP_USR-c14fe09d-66b4-4faa-b684-eb43b153e329';
-        const publicKeyBR = 'APP_USR-31df5c2a-63d0-4160-8f1c-e6622dc99439'; // 
+        const publicKeyBR = 'APP_USR-31df5c2a-63d0-4160-8f1c-e6622dc99439'; //
 
-        // Inicializamos Mercado Pago según el país/moneda del cliente
         const mp = new MercadoPago(monedaActual === 'UYU' ? publicKeyUY : publicKeyBR, {
             locale: monedaActual === 'UYU' ? 'es-UY' : 'pt-BR'
         });
@@ -117,6 +117,7 @@
         function configurarIdiomaYMoneda() {
             if (monedaActual === 'BRL') {
                 document.getElementById('opciones-pago-br').style.display = 'block';
+                document.getElementById('div-cep').style.display = 'block'; // Muestra el CEP
                 document.getElementById('t-volver').innerHTML = '<i class="fa fa-arrow-left"></i> Voltar à Loja';
                 document.getElementById('t-titulo').innerText = 'Finalizar Pedido';
                 document.getElementById('t-paso1').innerText = '1. Dados Pessoais';
@@ -130,6 +131,7 @@
                 selectPago('pix', 'br');
             } else {
                 document.getElementById('opciones-pago-uy').style.display = 'block';
+                document.getElementById('div-cep').style.display = 'none'; // Oculta el CEP en Uruguay
                 selectPago('brou', 'uy');
             }
         }
@@ -168,8 +170,8 @@
             const wallet = document.getElementById('wallet_container');
             const btnProcesar = document.getElementById('btn-procesar');
             
-            wallet.innerHTML = ''; // Limpiamos el botón de MP anterior
-            btnProcesar.style.display = 'block'; // Volvemos a mostrar el botón normal por defecto
+            wallet.innerHTML = ''; 
+            btnProcesar.style.display = 'block'; 
 
             if (metodo.includes('mercadopago')) {
                 infoBanco.style.display = 'none';
@@ -183,7 +185,12 @@
         async function procesarPedido() {
             const nombre = document.getElementById('c-nombre').value.trim(), tel = document.getElementById('c-tel').value.trim();
             const ciudad = document.getElementById('c-ciudad').value.trim(), dir = document.getElementById('c-dir').value.trim();
-            if (!nombre || !tel || !ciudad || !dir) return alert(monedaActual === 'BRL' ? 'Preencha todos os campos.' : 'Completa todos los campos.');
+            const cep = document.getElementById('c-cep').value.trim();
+
+            // FIX CEP: Validamos que haya puesto el CEP si está en la versión de Brasil
+            if (!nombre || !tel || !ciudad || !dir || (monedaActual === 'BRL' && !cep)) {
+                return alert(monedaActual === 'BRL' ? 'Preencha todos os campos, incluindo o CEP.' : 'Completa todos los campos.');
+            }
 
             const btn = document.getElementById('btn-procesar');
             btn.disabled = true; 
@@ -194,10 +201,13 @@
                 carritoParaEnviar.push({ id: 9999, title: 'Recargo (10%)', unit_price: Math.round(subtotalUYU * 0.10), quantity: 1 });
             }
 
+            // Armamos la dirección sumando el CEP para que quede prolijo en la base de datos
+            const direccionFinal = monedaActual === 'BRL' ? `${dir}, ${ciudad} - CEP: ${cep}` : `${dir}, ${ciudad}`;
+
             try {
                 const res = await fetch('/api/nueva-orden', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: carritoParaEnviar, comprador: { nombre, telefono: tel, direccion: `${dir}, ${ciudad}` }, metodo_pago: metodoPagoElegido, moneda: monedaActual })
+                    body: JSON.stringify({ items: carritoParaEnviar, comprador: { nombre, telefono: tel, direccion: direccionFinal }, metodo_pago: metodoPagoElegido, moneda: monedaActual })
                 });
 
                 const data = await res.json();
@@ -208,7 +218,6 @@
                 
                 if (data.type === 'mp') {
                     btn.style.display = 'none'; 
-                    // Renderizamos el botón de pago usando la variable dinámica 'mp'
                     mp.bricks().create("wallet", "wallet_container", { 
                         initialization: { preferenceId: data.id },
                         customization: { visual: { theme: 'default' } }
