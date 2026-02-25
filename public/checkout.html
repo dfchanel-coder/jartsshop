@@ -97,7 +97,14 @@
 
     <script src="app.js?v=4.0"></script>
     <script>
-        const mpCheckoutUY = new MercadoPago('APP_USR-c14fe09d-66b4-4faa-b684-eb43b153e329'); 
+        const publicKeyUY = 'APP_USR-c14fe09d-66b4-4faa-b684-eb43b153e329';
+        const publicKeyBR = 'APP_USR-31df5c2a-63d0-4160-8f1c-e6622dc99439'; // 
+
+        // Inicializamos Mercado Pago según el país/moneda del cliente
+        const mp = new MercadoPago(monedaActual === 'UYU' ? publicKeyUY : publicKeyBR, {
+            locale: monedaActual === 'UYU' ? 'es-UY' : 'pt-BR'
+        });
+
         let metodoPagoElegido = monedaActual === 'UYU' ? 'brou' : 'pix'; 
         let subtotalUYU = 0;
 
@@ -195,19 +202,18 @@
 
                 const data = await res.json();
                 
-                // EL FIX: Si hay error de red o en Mercado Pago, abortar proceso
                 if (!res.ok || data.error) {
                     throw new Error(data.error || 'Error al conectar');
                 }
                 
                 if (data.type === 'mp') {
                     btn.style.display = 'none'; 
-                    mpCheckoutUY.bricks().create("wallet", "wallet_container", { 
+                    // Renderizamos el botón de pago usando la variable dinámica 'mp'
+                    mp.bricks().create("wallet", "wallet_container", { 
                         initialization: { preferenceId: data.id },
                         customization: { visual: { theme: 'default' } }
                     });
                 } else if (data.type === 'transfer') {
-                    // FIX: Solo muestra el éxito si de verdad devuelve 'transfer'
                     document.getElementById('checkout-form').style.display = 'none';
                     document.getElementById('pantalla-exito').style.display = 'block';
                     document.getElementById('numero-orden').innerText = `#${data.id}`;
