@@ -140,20 +140,68 @@ app.post('/api/nueva-orden', async (req, res) => {
     const telefonoLimpio = xss(comprador.telefono);
     const direccionLimpia = xss(comprador.direccion);
     const total = items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
+    
+    let ordenId = null;
+
     try {
         const metodoConMoneda = `${metodo_pago.toUpperCase()} (${moneda})`;
+        
+        // 1. Guardamos la orden en la BD (atajamos el ID por si hay que borrarla)
         const result = await pool.query('INSERT INTO ordenes (cliente_nombre, cliente_telefono, cliente_direccion, metodo_pago, items_json, total) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [nombreLimpio, telefonoLimpio, direccionLimpia, metodoConMoneda, JSON.stringify(items), total]);
-        const ordenId = result.rows[0].id;
+        ordenId = result.rows[0].id;
 
         if (['brou', 'pix', 'bb'].includes(metodo_pago)) return res.json({ type: 'transfer', id: ordenId });
 
         if (metodo_pago.includes('mercadopago')) {
             const client = metodo_pago === 'mercadopago_br' ? clientBR : clientUY;
             const preference = new Preference(client);
-            const response = await preference.create({ body: { items: items, external_reference: `${ordenId}`, back_urls: { success: "https://jarts-shop.onrender.com", failure: "https://jarts-shop.onrender.com", pending: "https://jarts-shop.onrender.com" }, auto_return: "approved" } });
+            
+            let response;
+            let intentos = 0;
+            let exitoMP = false;
+
+            // 2. SISTEMA TOLERANTE A FALLOS: Reintenta hasta 3 veces si MP demora
+            while (intentos < 3 && !exitoMP) {
+                try {
+                    response = await preference.create({ 
+                        body: { 
+                            items: items, 
+                            external_reference: `${ordenId}`, 
+                            back_urls: { 
+                                success: "https://jarts-shop.onrender.com", 
+                                failure: "https://jarts-shop.onrender.com", 
+                                pending: "https://jarts-shop.onrender.com" 
+                            }, 
+                            auto_return: "approved" 
+                        } 
+                    });
+                    exitoMP = true; // Si llega acá, se conectó bárbaro
+                } catch (errMP) {
+                    intentos++;
+                    console.log(`Fallo conexión MP (Intento ${intentos}/3). Reintentando...`);
+                    if (intentos >= 3) throw errMP; // Si falla 3 veces, nos rendimos y saltamos al catch principal
+                    
+                    // Espera 1.5 segundos antes del próximo intento para darle tiempo a la red
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+            
             return res.json({ type: 'mp', id: response.id });
         }
-    } catch (error) { res.status(500).json({ error: 'Error procesando orden' }); }
+    } catch (error) { 
+        console.error("Error definitivo procesando orden:", error);
+        
+        // 3. EL ROLLBACK: Solo si fracasó rotundamente después de los reintentos, borramos la orden
+        if (ordenId) {
+            try {
+                await pool.query('DELETE FROM ordenes WHERE id = $1', [ordenId]);
+                console.log(`Orden ${ordenId} eliminada por fallo total de conexión.`);
+            } catch (dbError) {
+                console.error("Error intentando borrar la orden huérfana:", dbError);
+            }
+        }
+        res.status(500).json({ error: 'Error procesando orden' }); 
+    }
 });
 
 app.get('/fix-db', async (req, res) => {
